@@ -155,6 +155,33 @@ export const mockExamBatches = {
   },
 };
 
+/**
+ * 5 soal essay flat untuk sesi Pre-Test dan Post-Test.
+ * Dibagi dua set berdasarkan nomor absen ganjil/genap — sama seperti pola Ujian.
+ */
+export const mockLinearEssayBatches = {
+  setA: [
+    { id: "pt-a-001", prompt: "Jelaskan apa yang Anda pahami tentang konsep observasi dalam psikologi eksperimen.", type: "essay" as const, status: "Aktif" as const },
+    { id: "pt-a-002", prompt: "Deskripsikan pengalaman belajar Anda sejauh ini di laboratorium psikologi dan hal apa yang paling berkesan.", type: "essay" as const, status: "Aktif" as const },
+    { id: "pt-a-003", prompt: "Menurut Anda, apa perbedaan antara data kuantitatif dan data kualitatif dalam penelitian psikologi?", type: "essay" as const, status: "Aktif" as const },
+    { id: "pt-a-004", prompt: "Bagaimana cara Anda memastikan objektivitas saat melakukan observasi terhadap perilaku seseorang?", type: "essay" as const, status: "Aktif" as const },
+    { id: "pt-a-005", prompt: "Tuliskan satu pertanyaan penelitian yang menurut Anda menarik untuk dijawab melalui metode eksperimen.", type: "essay" as const, status: "Aktif" as const },
+  ],
+  setB: [
+    { id: "pt-b-001", prompt: "Jelaskan apa yang dimaksud dengan variabel bebas dan variabel terikat dalam sebuah eksperimen psikologi.", type: "essay" as const, status: "Aktif" as const },
+    { id: "pt-b-002", prompt: "Ceritakan satu tantangan yang Anda hadapi saat mengikuti praktikum dan bagaimana Anda mengatasinya.", type: "essay" as const, status: "Aktif" as const },
+    { id: "pt-b-003", prompt: "Mengapa reliabilitas dan validitas penting dalam alat ukur psikologi? Berikan contoh konkret.", type: "essay" as const, status: "Aktif" as const },
+    { id: "pt-b-004", prompt: "Apa yang Anda ketahui tentang etika dalam penelitian psikologi? Sebutkan minimal dua prinsip utamanya.", type: "essay" as const, status: "Aktif" as const },
+    { id: "pt-b-005", prompt: "Jelaskan bagaimana Anda akan merancang prosedur sederhana untuk mengukur tingkat konsentrasi seseorang.", type: "essay" as const, status: "Aktif" as const },
+  ],
+};
+
+export function getLinearEssayBatch(attendanceNumber: number): MockQuestion[] {
+  return attendanceNumber % 2 === 0
+    ? mockLinearEssayBatches.setB
+    : mockLinearEssayBatches.setA;
+}
+
 export function getExamBatchesByAttendance(attendanceNumber: number) {
   // TODO: replace with real backend logic.
   return attendanceNumber % 2 === 0

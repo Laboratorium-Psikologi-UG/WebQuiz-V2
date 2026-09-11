@@ -75,7 +75,7 @@ button { cursor: pointer; }
 .admin-content-intro { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 32px; }
 .admin-content-intro p { margin: 8px 0 0; color: #655b68; }
 .metrics-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-.metric-card, .activity-panel { border: 1px solid rgb(255 255 255 / 56%); border-radius: 12px; background: rgb(255 255 255 / 52%); box-shadow: 0 20px 44px rgb(23 28 47 / 22%), inset 0 1px 0 rgb(255 255 255 / 36%); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); padding: 24px; }
+.metric-card, .activity-panel { border: 1px solid rgb(255 255 255 / 64%); border-radius: 12px; background: rgb(255 255 255 / 64%); box-shadow: 0 20px 44px rgb(23 28 47 / 22%), inset 0 1px 0 rgb(255 255 255 / 58%); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); padding: 24px; }
 .metric-label { color: #655b68; font-size: 14px; }
 .metric-value { margin-top: 12px; color: var(--tertiary); font-size: 32px; font-weight: 600; letter-spacing: -0.04em; }
 .activity-panel { margin-top: 32px; }
@@ -110,12 +110,60 @@ button { cursor: pointer; }
 .legend-swatch { width: 14px; height: 14px; border: 1px solid var(--outline-variant); border-radius: 4px; background: var(--white); }
 .legend-swatch.current { border-color: var(--primary); background: var(--primary); }
 .legend-swatch.answered { border: 2px solid var(--primary); }
-.preflight-layout { display: grid; place-items: center; min-height: calc(100vh - 100px); padding: 48px 24px; }
-.preflight-card { width: min(100%, 720px); }
-.preflight-list { display: grid; gap: 16px; margin: 32px 0; }
-.preflight-item { display: flex; gap: 16px; border-top: 1px solid #e3d7e5; padding-top: 16px; }
-.preflight-item strong { display: block; margin-bottom: 4px; }
-.preflight-item p { margin: 0; color: #655b68; }
+.preflight-layout { position: relative; z-index: 1; display: grid; place-items: center; justify-items: center; width: 100%; min-height: 0; padding: 40px 24px; }
+.preflight-card { width: min(100%, 600px); margin-inline: auto; padding: 40px 44px 44px; background: rgb(255 255 255 / 62%); box-shadow: 0 20px 44px rgb(23 28 47 / 32%), inset 0 1px 0 rgb(255 255 255 / 58%); }
+.preflight-card .body-lead { color: var(--foreground); opacity: .88; }
+.preflight-card h1 { margin: 0 0 8px; color: var(--foreground); font-size: clamp(20px, 2.2vw, 26px); font-weight: 700; line-height: 1.25; }
+.preflight-card .body-lead { margin: 0 0 4px; font-size: 15px; }
+.preflight-list { display: grid; gap: 0; margin: 24px 0 28px; }
+.preflight-item { display: flex; align-items: flex-start; gap: 16px; border-top: 1px solid rgb(137 135 136 / 28%); padding: 16px 0; }
+.preflight-item:last-child { border-bottom: 1px solid rgb(137 135 136 / 28%); }
+.preflight-item strong { display: block; margin-bottom: 3px; font-size: 15px; }
+.preflight-item p { margin: 0; color: var(--foreground); font-size: 14px; line-height: 1.55; opacity: .9; }
+.preflight-icon { display: inline-grid; place-items: center; width: 36px; height: 36px; flex: 0 0 36px; border: 1.5px solid var(--tertiary); border-radius: 50%; color: var(--tertiary); }
+.preflight-icon svg { display: block; }
+.preflight-card .primary-button { width: 100%; border-color: var(--tertiary); background: var(--tertiary); margin-top: 0; }
+.preflight-card .primary-button:hover { background: var(--purple); border-color: var(--purple); }
+@media (max-width: 620px) {
+  .preflight-layout { padding: 24px 16px; }
+  .preflight-card { width: 100%; padding: 28px 24px 30px; }
+}
+
+.feedback-stage { align-items: center; justify-items: center; }
+.feedback-card { width: min(100%, 650px); padding: 36px 42px 40px; }
+.feedback-stage .figma-login-card { justify-self: center; }
+.feedback-title { margin: 0 0 12px; color: var(--foreground); font-size: clamp(22px, 2.5vw, 30px); line-height: 1.25; }
+.feedback-description { margin: 0; color: var(--foreground); font-size: 15px; line-height: 1.6; opacity: .82; }
+.feedback-form { display: grid; gap: 8px; margin-top: 26px; }
+.feedback-form label { color: var(--foreground); font-size: 14px; font-weight: 600; }
+.feedback-form textarea { min-height: 100px; width: 100%; resize: vertical; border: 1px solid rgb(23 27 45 / 42%); border-radius: 8px; background: rgb(255 255 255 / 82%); padding: 12px; color: var(--foreground); font: inherit; line-height: 1.5; outline: none; }
+.feedback-form textarea:focus { border-color: var(--tertiary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--lavender) 58%, transparent); }
+.feedback-error { margin: 4px 0 0; color: var(--error); font-size: 14px; }
+.feedback-submit { width: 100%; margin-top: 12px; border-color: var(--tertiary); background: var(--tertiary); }
+.feedback-submit:hover { background: var(--purple); border-color: var(--purple); }
+.feedback-admin-actions { display: flex; align-items: center; gap: 10px; }
+.feedback-admin-filter-label { color: var(--foreground); font-size: 13px; font-weight: 600; }
+.feedback-admin-filter { width: auto; min-width: 150px; min-height: 48px; border-color: var(--tertiary); border-radius: 10px; background: rgb(255 255 255 / 82%); padding-block: 12px; }
+.feedback-admin-groups { display: grid; gap: 16px; }
+.feedback-admin-group { padding: 0; }
+.feedback-admin-group details { padding: 22px 26px; }
+.feedback-admin-group summary { list-style: none; cursor: pointer; }
+.feedback-admin-group summary::-webkit-details-marker { display: none; }
+.feedback-admin-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.feedback-admin-heading > span:first-child { display: grid; gap: 4px; }
+.feedback-admin-heading strong { font-size: 18px; }
+.feedback-admin-heading small { color: var(--neutral); font-size: 13px; }
+.feedback-admin-list { display: grid; gap: 12px; margin-top: 20px; }
+.feedback-admin-entry { border-top: 1px solid var(--outline-variant); padding-top: 14px; }
+.feedback-admin-entry p { display: grid; gap: 4px; margin: 0 0 12px; color: var(--foreground); font-size: 14px; line-height: 1.55; }
+.feedback-admin-entry p:last-child { margin-bottom: 0; }
+.feedback-admin-entry strong { color: var(--purple); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; }
+@media (max-width: 620px) {
+  .feedback-admin-actions { align-items: stretch; flex-direction: column; width: 100%; }
+  .feedback-admin-filter { width: 100%; }
+}
+/* Preflight card harus centered, bukan justify-self: start dari .praktikan-figma-login */
+.preflight-layout .figma-login-card { justify-self: center; }
 .form-error { margin: 8px 0 0; color: #8c2735; font-size: 14px; }
 .text-input[aria-invalid="true"] { border-color: #8c2735; }
 .admin-kicker { margin: 0 0 4px !important; color: var(--tertiary) !important; font-size: 12px !important; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
@@ -152,10 +200,21 @@ button { cursor: pointer; }
 .question-instruction { margin: -20px 0 24px; color: #655b68; }
 .option-button:disabled, .secondary-button:disabled, .primary-button:disabled { cursor: not-allowed; opacity: .5; transform: none; }
 .nav-count { display: grid; place-items: center; width: 42px; height: 42px; border: 1px solid #e1b9e7; border-radius: 50%; color: var(--tertiary); font-size: 12px; font-weight: 700; }
+/* completion-shell kept for any legacy references; visual now driven by completion-card */
 .completion-shell { display: flex; min-height: 100vh; flex-direction: column; align-items: center; justify-content: center; padding: 48px 24px; text-align: center; }
-.completion-mark { display: grid; place-items: center; width: 88px; height: 88px; margin-bottom: 28px; border-radius: 50%; background: var(--primary); color: var(--white); font-size: 40px; }
-.completion-title { max-width: 650px; font-size: clamp(38px, 5vw, 58px); }
-.completion-copy { margin-bottom: 28px; }
+.completion-mark { display: grid; place-items: center; width: 88px; height: 88px; margin-bottom: 28px; border-radius: 50%; background: var(--tertiary); color: var(--white); font-size: 40px; }
+/* New completion card layout */
+.completion-stage { align-items: center; justify-items: center; }
+.completion-card { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 0; }
+.completion-icon { display: grid; place-items: center; width: 72px; height: 72px; margin-bottom: 24px; border-radius: 50%; background: var(--tertiary); color: var(--white); box-shadow: 0 8px 24px color-mix(in srgb, var(--tertiary) 38%, transparent); animation: check-pop 480ms cubic-bezier(.2, .8, .2, 1) both; }
+.completion-card .eyebrow { margin-bottom: 10px; }
+.completion-title { margin: 0 0 12px; color: var(--foreground); font-size: clamp(20px, 2.2vw, 26px); font-weight: 700; line-height: 1.25; }
+.completion-copy { margin: 0 0 28px; color: var(--foreground); font-size: 15px; line-height: 1.6; opacity: .82; max-width: 420px; }
+.completion-btn { width: 100%; border-color: var(--tertiary); background: var(--tertiary); text-decoration: none; margin-top: 0; }
+.completion-btn:hover { background: var(--purple); border-color: var(--purple); }
+/* Card centering — override praktikan-figma-login's justify-self: start */
+.completion-stage .figma-login-card { justify-self: center; }
+/* .completion-title and .completion-copy are now fully defined above in the completion card block */
 .completion-shell .privacy-note { margin-top: 24px; }
 .finish-dialog { text-align: center; }
 .finish-symbol { display: grid; place-items: center; width: 56px; height: 56px; margin: 0 auto 20px; border-radius: 50%; background: #f3e4f5; color: var(--tertiary); font-size: 26px; font-weight: 700; }
@@ -272,7 +331,7 @@ button { cursor: pointer; }
 .upload-dropzone { border-color: var(--neutral); background: var(--background); }
 .upload-icon { background: var(--lavender); color: var(--purple); }
 .image-preview { background: var(--background); }
-.completion-ring { border-color: var(--lavender); background: conic-gradient(var(--primary) 0 100%, var(--surface-container-high) 100%); }
+.completion-ring { border-color: color-mix(in srgb, var(--tertiary) 40%, transparent); background: conic-gradient(var(--tertiary) 0 100%, var(--surface-container-high) 100%); }
 .finish-symbol { background: var(--lavender); color: var(--purple); }
 .toast { background: var(--foreground); }
 .form-error { color: var(--error); }
@@ -327,7 +386,9 @@ button { cursor: pointer; }
 .figma-audience { display: inline-flex; align-items: center; justify-content: center; min-height: 40px; border: 1px solid var(--tertiary); border-radius: 15px; background: var(--tertiary); padding: 8px 18px; color: var(--white); font-size: 14px; font-weight: 700; line-height: 20px; text-decoration: none; transition: background 160ms ease, transform 160ms ease; }
 .figma-audience:hover { background: var(--purple); transform: translateY(-1px); }
 .figma-login-stage { position: relative; z-index: 1; display: grid; align-items: center; min-height: 0; padding: 40px 64px; }
-.figma-login-card { position: relative; z-index: 1; width: min(100%, 560px); overflow: visible; border: 1px solid rgb(255 255 255 / 56%); border-radius: 22px; background: rgb(255 255 255 / 52%); box-shadow: 0 20px 44px rgb(23 28 47 / 32%), inset 0 1px 0 rgb(255 255 255 / 36%); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); padding: 30px 38px 34px; }
+/* Shared participant stage: one centering contract for dashboard, exam, feedback, and completion. */
+.center-stage { display: flex; width: 100%; min-width: 0; flex-direction: column; align-items: center; justify-content: center; }
+.figma-login-card { position: relative; z-index: 1; width: min(100%, 560px); overflow: visible; border: 1px solid rgb(255 255 255 / 64%); border-radius: 22px; background: rgb(255 255 255 / 64%); box-shadow: 0 20px 44px rgb(23 28 47 / 32%), inset 0 1px 0 rgb(255 255 255 / 58%); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); padding: 30px 38px 34px; }
 .admin-figma-login .figma-login-card { justify-self: end; }
 .praktikan-figma-login .figma-login-card { justify-self: start; }
 .figma-display-title { margin: 0 0 20px; color: var(--foreground); font-family: var(--font-inter), sans-serif; font-size: clamp(26px, 2.6vw, 34px); font-weight: 600; line-height: 1.18; letter-spacing: 0; text-align: left; text-shadow: 0 1px 1px rgb(255 255 255 / 40%); }
@@ -375,6 +436,12 @@ button { cursor: pointer; }
 .exam-question-card { width: min(100%, 620px); margin: 0 auto; padding: 34px 36px 30px; }
 .exam-question-card h1 { margin: 18px 0 24px; color: var(--foreground); font-size: clamp(24px, 2.5vw, 32px); line-height: 1.25; }
 .exam-question-card .question-type { background: color-mix(in srgb, var(--lavender) 55%, var(--white)); color: var(--purple); }
+/* Judul jenis tes di atas badge tipe soal */
+.exam-sesi-label { margin: 0 0 2px; color: var(--purple); font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+/* Layout 2-kolom untuk sesi tanpa sidebar kiri (pre-test / post-test) */
+.exam-dashboard-body--linear { grid-template-columns: minmax(0, 1fr) 236px; }
+@media (max-width: 900px) { .exam-dashboard-body--linear { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 620px) { .exam-dashboard-body--linear { grid-template-columns: 1fr; } }
 
 .admin-header-user { display: flex; align-items: center; gap: 24px; }
 .admin-header-user > span { display: grid; gap: 2px; text-align: right; }
@@ -386,7 +453,7 @@ button { cursor: pointer; }
 .admin-dashboard-shell .quiz-header { min-height: 84px; }
 .admin-dashboard-body { display: grid; grid-template-columns: 205px minmax(0, 1fr); gap: 24px; min-height: calc(100vh - 156px); padding: 24px; }
 
-.admin-dashboard-sidebar, .admin-activity-card { border: 1px solid rgb(255 255 255 / 56%); background: rgb(255 255 255 / 52%); box-shadow: 0 20px 44px rgb(23 28 47 / 22%), inset 0 1px 0 rgb(255 255 255 / 36%); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); }
+.admin-dashboard-sidebar, .admin-activity-card { border: 1px solid rgb(255 255 255 / 64%); background: rgb(255 255 255 / 64%); box-shadow: 0 20px 44px rgb(23 28 47 / 22%), inset 0 1px 0 rgb(255 255 255 / 58%); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); }
 .admin-dashboard-sidebar { display: flex; min-height: 520px; flex-direction: column; overflow: hidden; border-radius: 0 0 18px 18px; }
 .admin-dashboard-sidebar-title { border-bottom: 1px solid rgb(137 135 136 / 35%); padding: 38px 16px 34px; font-size: 18px; font-weight: 700; line-height: 1.15; text-align: center; }
 .admin-dashboard-nav { display: grid; gap: 2px; padding: 12px 16px; }
@@ -400,9 +467,9 @@ button { cursor: pointer; }
 .admin-dashboard-intro h1 { margin: 0; font-size: 32px; line-height: 1.2; }
 .admin-dashboard-intro p:last-child { margin: 8px 0 0; color: var(--neutral); }
 .admin-dashboard-overview { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(180px, .8fr) minmax(180px, .8fr); gap: 16px; }
-.admin-overview-card { display: flex; min-height: 180px; flex-direction: column; justify-content: space-between; border: 1px solid rgb(255 255 255 / 56%); border-radius: 16px; background: rgb(255 255 255 / 52%); box-shadow: 0 20px 44px rgb(23 28 47 / 22%), inset 0 1px 0 rgb(255 255 255 / 36%); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); padding: 24px; color: var(--foreground); text-decoration: none; transition: transform 160ms ease, background 160ms ease, box-shadow 160ms ease; }
+.admin-overview-card { display: flex; min-height: 180px; flex-direction: column; justify-content: space-between; border: 1px solid rgb(255 255 255 / 64%); border-radius: 16px; background: rgb(255 255 255 / 64%); box-shadow: 0 20px 44px rgb(23 28 47 / 22%), inset 0 1px 0 rgb(255 255 255 / 58%); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); padding: 24px; color: var(--foreground); text-decoration: none; transition: transform 160ms ease, background 160ms ease, box-shadow 160ms ease; }
 .admin-overview-card:hover { background: rgb(255 255 255 / 68%); box-shadow: 0 28px 56px rgb(23 28 47 / 28%), inset 0 1px 0 rgb(255 255 255 / 48%); transform: translateY(-3px); }
-.admin-overview-card.featured { min-height: 180px; background: rgb(255 255 255 / 62%); }
+.admin-overview-card.featured { min-height: 180px; background: rgb(255 255 255 / 68%); }
 .admin-overview-label { font-size: 14px; font-weight: 700; letter-spacing: .12em; }
 .admin-overview-card strong { color: var(--tertiary); font-size: clamp(48px, 6vw, 72px); font-weight: 600; line-height: 1; letter-spacing: -.04em; }
 .admin-overview-action { color: var(--purple); font-size: 13px; font-weight: 600; }
@@ -498,7 +565,7 @@ button { cursor: pointer; }
 
 .landing-page { position: relative; display: grid; grid-template-rows: 84px minmax(0, 1fr) 72px; min-height: 100vh; overflow: hidden; background: var(--foreground); color: var(--foreground); }
 .landing-page::before { position: absolute; inset: 0; z-index: 0; background-image: linear-gradient(rgb(23 28 47 / 22%), rgb(23 28 47 / 22%)), url("/figma/praktikan-raw-1.png"); background-position: center; background-size: cover; content: ""; }
-.glass-surface { border: 1px solid rgb(255 255 255 / 56%); border-radius: 22px; background: rgb(255 255 255 / 52%); box-shadow: 0 20px 44px rgb(23 28 47 / 32%), inset 0 1px 0 rgb(255 255 255 / 36%); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); }
+.glass-surface { border: 1px solid rgb(255 255 255 / 64%); border-radius: 22px; background: rgb(255 255 255 / 64%); box-shadow: 0 20px 44px rgb(23 28 47 / 32%), inset 0 1px 0 rgb(255 255 255 / 58%); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); }
 .landing-content { position: relative; z-index: 1; display: grid; align-items: center; justify-items: start; padding: 48px clamp(24px, 8vw, 120px); }
 .landing-card { width: min(100%, 700px); padding: 44px 48px; }
 .landing-card .eyebrow { color: var(--purple); font-weight: 700; }
@@ -589,8 +656,8 @@ button { cursor: pointer; }
 .option-button.selected { background: #fdf9fe; }
 .nav-count { border: 0; background: var(--background); }
 .completion-shell { background: var(--background); }
-.completion-ring { display: grid; place-items: center; width: 130px; height: 130px; margin-bottom: 28px; border: 1px solid #e6c9ed; border-radius: 50%; background: conic-gradient(var(--primary) 0 100%, #eadced 100%); animation: ring-reveal 720ms cubic-bezier(.2, .8, .2, 1) both; }
-.completion-ring .completion-mark { width: 94px; height: 94px; margin: 0; border: 0; background: var(--surface); color: var(--primary); }
+.completion-ring { display: grid; place-items: center; width: 130px; height: 130px; margin-bottom: 28px; border: 1px solid color-mix(in srgb, var(--tertiary) 40%, transparent); border-radius: 50%; background: conic-gradient(var(--tertiary) 0 100%, #eadced 100%); animation: ring-reveal 720ms cubic-bezier(.2, .8, .2, 1) both; }
+.completion-ring .completion-mark { width: 94px; height: 94px; margin: 0; border: 0; background: var(--surface); color: var(--tertiary); }
 
 @keyframes question-enter { from { opacity: 0; transform: translateX(12px); } to { opacity: 1; transform: translateX(0); } }
 @keyframes check-pop { 0% { opacity: 0; transform: scale(.5) rotate(-12deg); } 70% { transform: scale(1.25) rotate(4deg); } 100% { opacity: 1; transform: scale(1) rotate(0); } }
@@ -620,9 +687,9 @@ button { cursor: pointer; }
 .exam-sidebar,
 .exam-navigator,
 .exam-question-card {
-  border: 1px solid rgb(255 255 255 / 56%);
-  background: rgb(255 255 255 / 52%);
-  box-shadow: 0 20px 44px rgb(23 28 47 / 22%), inset 0 1px 0 rgb(255 255 255 / 36%);
+  border: 1px solid rgb(255 255 255 / 64%);
+  background: rgb(255 255 255 / 64%);
+  box-shadow: 0 20px 44px rgb(23 28 47 / 22%), inset 0 1px 0 rgb(255 255 255 / 58%);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
 }
@@ -644,3 +711,76 @@ button { cursor: pointer; }
 .exam-question-card .option-button.selected .option-radio { border-color: var(--white); background: var(--white); }
 .exam-question-card .option-button:not(.selected) { border: 1px solid var(--outline-variant); background: rgb(255 255 255 / 78%); color: var(--foreground); box-shadow: none; }
 .exam-question-card .question-type { background: color-mix(in srgb, var(--lavender) 55%, var(--white)); color: var(--purple); }
+
+/* ============================================================
+   SHARED HEADER ADDITIONS
+   ============================================================ */
+.quiz-header-name { color: var(--white); font-size: clamp(16px, 2vw, 28px); font-weight: 700; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 40vw; }
+
+/* ============================================================
+   PRAKTIKAN DASHBOARD  (/dashboard)
+   Reuses: .figma-login, .figma-login-header, .figma-login-footer,
+           .figma-brand, .figma-audience, .glass-surface, .figma-submit
+   ============================================================ */
+.praktikan-dashboard-stage { align-items: center; justify-items: center; }
+.praktikan-dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(280px, 420px));
+  justify-content: center;
+  gap: 28px;
+  width: min(100%, 920px);
+  padding: 0 clamp(16px, 4vw, 40px);
+}
+.praktikan-session-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 36px 32px 32px;
+  /* width comes from grid — override figma-login-card's width: min(100%, 560px) */
+  width: 100% !important;
+}
+.praktikan-session-title {
+  margin: 0;
+  color: var(--foreground);
+  font-size: clamp(24px, 2.4vw, 32px);
+  font-weight: 700;
+  letter-spacing: -.01em;
+  line-height: 1.15;
+  /* Playfair Display SC feel via weight + small-caps */
+  font-variant: small-caps;
+}
+.praktikan-session-desc {
+  flex: 1;
+  margin: 0;
+  color: var(--foreground);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.6;
+  opacity: .82;
+}
+.praktikan-session-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  width: 100%;
+  border: 1px solid var(--tertiary);
+  border-radius: 8px;
+  background: var(--tertiary);
+  color: var(--white);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  text-align: center;
+  transition: background 160ms ease, transform 160ms ease;
+  margin-top: auto;
+}
+.praktikan-session-btn:hover { background: var(--purple); transform: translateY(-1px); }
+@media (max-width: 900px) {
+  .praktikan-dashboard-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 620px) {
+  .praktikan-dashboard-grid { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .praktikan-session-card { padding: 28px 24px; }
+  .praktikan-session-title { font-size: 26px; }
+}

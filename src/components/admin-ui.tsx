@@ -16,6 +16,7 @@ export const adminMenuItems: AdminMenuItem[] = [
   { label: "Question Bank", href: "/admin/question-bank", glyph: "▥" },
   { label: "Reports", href: "/admin/reports", glyph: "▥" },
   { label: "Users and Roles", href: "/admin/users-and-roles", glyph: "♙" },
+  { label: "Kesan dan Pesan", href: "/admin/kesan-pesan", glyph: "✦" },
 ];
 
 export function AdminSidebar() {

@@ -6,6 +6,11 @@ export function GlassCard({ className = "", children }: { className?: string; ch
   return <div className={`glass-surface ${className}`.trim()}>{children}</div>;
 }
 
+/** Shared full-height stage that keeps participant cards centered and responsive. */
+export function CenterStage({ className = "", children }: { className?: string; children: ReactNode }) {
+  return <section className={`center-stage ${className}`.trim()}>{children}</section>;
+}
+
 export function QuizHeader({
   participantLabel,
   adminName,
@@ -17,6 +22,7 @@ export function QuizHeader({
   actionHref,
   participantOnly = false,
   hideMeta = false,
+  dashboardName,
 }: {
   participantLabel?: string;
   adminName?: string;
@@ -28,6 +34,8 @@ export function QuizHeader({
   actionHref?: string;
   participantOnly?: boolean;
   hideMeta?: boolean;
+  /** Nama praktikan ditampilkan besar di kanan header (khusus halaman dashboard) */
+  dashboardName?: string;
 }) {
   return (
     <header className="figma-login-header quiz-header">
@@ -35,7 +43,7 @@ export function QuizHeader({
         <Image src="/figma/admin-building.jpeg" alt="Logo Laboratorium Psikologi" width={68} height={68} />
         <span><strong>QUIZ LABORATORIUM PSIKOLOGI</strong><small>LABORATORIUM PSIKOLOGI UNIVERSITAS GUNADARMA</small></span>
       </Link>
-      {adminName && adminRole && logoutHref ? <div className="admin-header-user"><span><strong>{adminName}</strong><small>{adminRole}</small></span><Link className="figma-audience" href={logoutHref}>Logout</Link></div> : actionLabel && actionHref ? <Link className="figma-audience" href={actionHref}>{actionLabel}</Link> : hideMeta ? null : participantOnly ? <div className="exam-meta"><span>{participantLabel}</span></div> : <div className="exam-meta"><span>{participantLabel}</span><span>{contextLabel}</span><span className="time-note">{timeLabel}</span></div>}
+      {adminName && adminRole && logoutHref ? <div className="admin-header-user"><span><strong>{adminName}</strong><small>{adminRole}</small></span><Link className="figma-audience" href={logoutHref}>Logout</Link></div> : dashboardName ? <span className="quiz-header-name">{dashboardName}</span> : actionLabel && actionHref ? <Link className="figma-audience" href={actionHref}>{actionLabel}</Link> : hideMeta ? null : participantOnly ? <div className="exam-meta"><span>{participantLabel}</span></div> : <div className="exam-meta"><span>{participantLabel}</span><span>{contextLabel}</span><span className="time-note">{timeLabel}</span></div>}
     </header>
   );
 }

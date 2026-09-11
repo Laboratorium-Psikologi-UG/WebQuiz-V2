@@ -22,7 +22,7 @@ export default function PraktikanLoginPage() {
 		}
 		setError("");
 		sessionStorage.setItem("webquiz-participant", JSON.stringify({ name, npm, className, attendanceNumber, token }));
-		router.push("/exam");
+		router.push("/dashboard");
 	}
 
 	return (

@@ -5,12 +5,12 @@ import { AdminSidebar } from "@/components/admin-ui";
 import { GlassCard, QuizHeader } from "@/components/quiz-ui";
 import {
   MockParticipant, MockQuestion, MockResult,
-  MockExamSession, QuestionBankSummary, MockAdminUser,
-  mockParticipants, mockQuestions, mockResults,
+  MockExamSession, MockAdminUser,
+  mockParticipants, mockResults,
   mockExamSessions, mockQuestionBankSummary, mockAdminUsers,
 } from "@/lib/mock-data";
 
-type PageKey = "monitoring" | "exam-management" | "question-bank" | "reports" | "users-and-roles";
+type PageKey = "monitoring" | "exam-management" | "question-bank" | "reports" | "users-and-roles" | "kesan-pesan";
 
 /* ── Shell & intro (unchanged) ─────────────────────────────────── */
 
@@ -328,6 +328,97 @@ export function UsersAndRolesPage() {
           </form>
         </div>
       )}
+    </AdminPageShell>
+  );
+}
+
+type FeedbackGroup = {
+  kelas: string;
+  entries: Array<{ kesan: string; pesan: string }>;
+};
+
+const mockFeedbackGroups: FeedbackGroup[] = [
+  {
+    kelas: "3PA00",
+    entries: [
+      { kesan: "Materi praktikum membantu saya memahami konsep dengan lebih terarah.", pesan: "Semoga contoh kasus dapat ditambah pada sesi berikutnya." },
+      { kesan: "Alur praktikum cukup jelas dan suasananya nyaman.", pesan: "Terima kasih sudah mendampingi proses belajar kami." },
+    ],
+  },
+  {
+    kelas: "3PA01",
+    entries: [
+      { kesan: "Saya jadi lebih percaya diri untuk membaca hasil observasi.", pesan: "Penjelasan asisten sudah mudah diikuti." },
+      { kesan: "Quiz membantu mengingat kembali materi setelah praktikum.", pesan: "Waktu diskusi singkat bisa ditambah." },
+    ],
+  },
+  {
+    kelas: "3PA02",
+    entries: [
+      { kesan: "Praktikum terasa interaktif dan tidak monoton.", pesan: "Terima kasih atas feedback selama sesi berlangsung." },
+    ],
+  },
+];
+
+export function KesanPesanPage() {
+  const [kelasFilter, setKelasFilter] = useState("Semua Kelas");
+  const kelasOptions = ["Semua Kelas", ...mockFeedbackGroups.map((group) => group.kelas)];
+  const visibleGroups = kelasFilter === "Semua Kelas"
+    ? mockFeedbackGroups
+    : mockFeedbackGroups.filter((group) => group.kelas === kelasFilter);
+
+  function exportFeedback() {
+    const rows = visibleGroups.flatMap((group) => group.entries.map((entry) => [group.kelas, entry.kesan, entry.pesan]));
+    const csv = [
+      ["Kelas", "Kesan", "Pesan"],
+      ...rows,
+    ].map((row) => row.map((cell) => `"${cell.replaceAll('"', '""')}"`).join(",")).join("\\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const filename = kelasFilter === "Semua Kelas" ? "kesan-pesan-semua-kelas.csv" : `kesan-pesan-${kelasFilter}.csv`;
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  return (
+    <AdminPageShell page="kesan-pesan">
+      <AdminPageIntro
+        eyebrow="Anonymous feedback"
+        title="Kesan dan Pesan"
+        description="Baca masukan praktikan berdasarkan kelas tanpa menampilkan identitas pengirim."
+        action={
+          <div className="feedback-admin-actions">
+            <label className="feedback-admin-filter-label" htmlFor="feedback-class-filter">Kelas</label>
+            <select className="text-input feedback-admin-filter" id="feedback-class-filter" onChange={(event) => setKelasFilter(event.target.value)} value={kelasFilter}>
+              {kelasOptions.map((kelas) => <option key={kelas}>{kelas}</option>)}
+            </select>
+            <button className="action-button-blue" onClick={exportFeedback}>Export</button>
+          </div>
+        }
+      />
+      <div className="feedback-admin-groups">
+        {visibleGroups.map((group) => (
+          <GlassCard className="admin-data-card feedback-admin-group" key={group.kelas}>
+            <details open>
+              <summary className="feedback-admin-heading">
+                <span><strong>{group.kelas}</strong><small>{group.entries.length} respons anonim</small></span>
+                <span aria-hidden="true">⌄</span>
+              </summary>
+              <div className="feedback-admin-list">
+                {group.entries.map((entry, index) => (
+                  <article className="feedback-admin-entry" key={`${group.kelas}-${index}`}>
+                    <p><strong>Kesan</strong>{entry.kesan}</p>
+                    <p><strong>Pesan</strong>{entry.pesan}</p>
+                  </article>
+                ))}
+              </div>
+            </details>
+          </GlassCard>
+        ))}
+      </div>
     </AdminPageShell>
   );
 }
