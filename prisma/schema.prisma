@@ -1,29 +1,240 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
-// TODO: Define your models here. Example:
-//
-// model Quiz {
-//   id        String   @id @default(cuid())
-//   title     String
-//   createdAt DateTime @default(now())
-//   updatedAt DateTime @updatedAt
-//   questions Question[]
-// }
-//
-// model Question {
-//   id     String @id @default(cuid())
-//   quizId String
-//   quiz   Quiz   @relation(fields: [quizId], references: [id], onDelete: Cascade)
-//
-//   @@index([quizId])
-// }
+model Kelas {
+  id               Int               @id @default(autoincrement())
+  name             String            @unique @db.VarChar(191)
+
+  redemptions      TokenRedemption[]
+  feedbacks        Feedback[]
+
+  @@map("kelas")
+}
+
+model Role {
+  id       Int       @id @default(autoincrement())
+  name     String    @unique @db.VarChar(191)
+
+  accounts Account[]
+
+  @@map("role")
+}
+
+model Account {
+  id           Int      @id @default(autoincrement())
+  username     String   @unique @db.VarChar(191)
+  passwordHash String   @db.VarChar(255)
+  roleId       Int
+  status       String   @db.VarChar(32) // "aktif" | "menunggu"
+  createdAt    DateTime @default(now())
+
+  role Role @relation(fields: [roleId], references: [id])
+
+  @@index([roleId])
+  @@map("account")
+}
+
+model PackStatus {
+  id    Int    @id @default(autoincrement())
+  name  String @unique @db.VarChar(32) // "draft" | "published"
+
+  packs Pack[]
+
+  @@map("pack_status")
+}
+
+model Pack {
+  id              Int      @id @default(autoincrement())
+  title           String   @db.VarChar(191)
+  durationMinutes Int
+  passMarkPct     Int      @default(70)
+  statusId        Int
+  createdBy       String   @db.VarChar(191) // Account.username
+  createdAt       DateTime @default(now())
+
+  status    PackStatus @relation(fields: [statusId], references: [id])
+  questions Question[]
+  tokens    Token[]
+  attempts  Attempt[]
+
+  @@index([statusId])
+  @@index([createdBy])
+  @@map("pack")
+}
+
+model Question {
+  id       Int    @id @default(autoincrement())
+  packId   Int
+  prompt   String @db.Text
+  position Int
+
+  pack           Pack            @relation(fields: [packId], references: [id], onDelete: Cascade)
+  imageUrl       ImageUrl?
+  answerOptions  AnswerOption[]
+  acceptedAnswer AcceptedAnswer[]
+  attemptAnswers AttemptAnswer[]
+
+  @@index([packId])
+  @@map("question")
+}
+
+model ImageUrl {
+  id         Int    @id @default(autoincrement())
+  questionId Int    @unique
+  url        String @db.VarChar(512)
+  position   Int
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@map("image_url")
+}
+
+model AnswerOption {
+  id         Int     @id @default(autoincrement())
+  questionId Int
+  optionText String  @db.VarChar(512)
+  position   Int
+  isCorrect  Boolean @default(false)
+
+  question   Question           @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  selections AttemptSelection[]
+
+  @@index([questionId])
+  @@map("answer_option")
+}
+
+model AcceptedAnswer {
+  id         Int    @id @default(autoincrement())
+  questionId Int
+  answerText String @db.VarChar(512)
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([questionId])
+  @@map("accepted_answer")
+}
+
+model Token {
+  id        Int       @id @default(autoincrement())
+  code      String    @unique @db.VarChar(8)
+  packId    Int
+  createdBy String    @db.VarChar(191)
+  createdAt DateTime  @default(now())
+  expiresAt DateTime
+  revokedAt DateTime?
+
+  pack        Pack              @relation(fields: [packId], references: [id])
+  redemptions TokenRedemption[]
+
+  @@index([packId])
+  @@map("token")
+}
+
+model TokenRedemption {
+  id              Int      @id @default(autoincrement())
+  tokenId         Int
+  npm             String   @db.VarChar(32)
+  participantName String   @db.VarChar(191)
+  kelasId         Int
+  attendanceNo    Int
+  redeemedAt      DateTime @default(now())
+
+  token    Token     @relation(fields: [tokenId], references: [id])
+  kelas    Kelas     @relation(fields: [kelasId], references: [id])
+  attempt  Attempt?
+  feedback Feedback?
+
+  @@unique([tokenId, npm])
+  @@index([kelasId])
+  @@map("token_redemption")
+}
+
+model Attempt {
+  id             Int       @id @default(autoincrement())
+  redemptionId   Int       @unique
+  packId         Int
+  startedAt      DateTime  @default(now())
+  lastActivityAt DateTime  @default(now())
+  submittedAt    DateTime?
+
+  redemption TokenRedemption @relation(fields: [redemptionId], references: [id])
+  pack       Pack            @relation(fields: [packId], references: [id])
+  result     AttemptResult?
+  answers    AttemptAnswer[]
+
+  @@index([packId])
+  @@index([lastActivityAt])
+  @@map("attempt")
+}
+
+model AttemptResult {
+  attemptId Int      @id
+  scorePct  Decimal  @db.Decimal(5, 2)
+  passed    Boolean
+  gradedAt  DateTime?
+
+  attempt Attempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+
+  @@map("attempt_result")
+}
+
+model AttemptAnswer {
+  id        Int     @id @default(autoincrement())
+  attemptId Int
+  questionId Int
+  isFlagged Boolean @default(false)
+
+  attempt  Attempt               @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  question Question              @relation(fields: [questionId], references: [id])
+  selections AttemptSelection[]
+  textResponse AttemptTextResponse?
+
+  @@unique([attemptId, questionId])
+  @@index([questionId])
+  @@map("attempt_answer")
+}
+
+model AttemptSelection {
+  answerId Int
+  optionId Int
+
+  answer AttemptAnswer @relation(fields: [answerId], references: [id], onDelete: Cascade)
+  option AnswerOption  @relation(fields: [optionId], references: [id])
+
+  @@id([answerId, optionId])
+  @@index([optionId])
+  @@map("attempt_selection")
+}
+
+model AttemptTextResponse {
+  answerId     Int      @id
+  responseText String   @db.Text
+  manualScore  Decimal? @db.Decimal(5, 2)
+  gradedBy     String?  @db.VarChar(191) // Account.username
+  gradedAt     DateTime?
+
+  answer AttemptAnswer @relation(fields: [answerId], references: [id], onDelete: Cascade)
+
+  @@map("attempt_text_response")
+}
+
+model Feedback {
+  id           Int      @id @default(autoincrement())
+  redemptionId Int      @unique
+  kelasId      Int
+  kesan        String   @db.Text
+  pesan        String   @db.Text
+  createdAt    DateTime @default(now())
+
+  redemption TokenRedemption @relation(fields: [redemptionId], references: [id])
+  kelas      Kelas           @relation(fields: [kelasId], references: [id])
+
+  @@index([kelasId])
+  @@map("feedback")
+}
