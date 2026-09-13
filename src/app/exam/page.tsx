@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
-import { CenterStage, GlassCard, QuizHeader } from "@/components/quiz-ui";
+import { CenterStage, GlassCard, ParticipantRouteGuard, QuizHeader, useBeforeUnload } from "@/components/quiz-ui";
 import {
   getExamBatchesByAttendance,
   getLinearEssayBatch,
@@ -75,7 +75,7 @@ function ChoiceInput({ answer, onChange }: { answer: string; onChange: (a: strin
 
 function Sidebar({ activeBatch, onSelect }: { activeBatch: BatchKey; onSelect: (b: BatchKey) => void }) {
   return (
-    <aside className="exam-sidebar">
+    <aside className="glass-card exam-sidebar">
       <div className="exam-sidebar-title">Dashboard<br />Praktikan</div>
       {(["pilihanGanda", "essay", "kasus"] as BatchKey[]).map((batch) => (
         <button
@@ -110,7 +110,7 @@ function QuestionNavigator({
   const batchLabel =
     activeBatch === "pilihanGanda" ? "Pilihan Ganda" : activeBatch === "essay" ? "Essay" : "Kasus";
   return (
-    <aside className="exam-navigator">
+    <aside className="glass-card exam-navigator">
       <div className="navigator-heading">
         <strong>{batchLabel}</strong>
         <span>{answeredCount}/{totalQuestions}</span>
@@ -157,7 +157,7 @@ function LinearNavigator({
   onSelect: (n: number) => void;
 }) {
   return (
-    <aside className="exam-navigator">
+    <aside className="glass-card exam-navigator">
       <div className="navigator-heading">
         <strong>Soal Essay</strong>
         <span>{answeredCount}/{questions.length}</span>
@@ -211,7 +211,7 @@ const IconShield = () => (
 
 function PreflightScreen({ participantName, sesiLabel, onStart }: { participantName: string; sesiLabel: string; onStart: () => void }) {
   return (
-    <main className="figma-login praktikan-figma-login">
+    <main className="figma-login functional-page">
       <QuizHeader participantLabel={participantName} participantOnly />
       <CenterStage className="preflight-layout figma-login-stage">
         <GlassCard className="preflight-card figma-login-card">
@@ -246,11 +246,12 @@ function FinishDialog({ onCancel, onConfirm }: { onCancel: () => void; onConfirm
   return (
     <div className="modal-backdrop">
       <div className="modal-card finish-dialog">
+        <span aria-hidden="true" className="confirmation-icon confirmation-icon-warning">!</span>
         <h2>Selesaikan tes?</h2>
-        <p>Pastikan seluruh jawaban sudah sesuai sebelum mengirim respons.</p>
+        <p>Setelah submit, jawaban tidak dapat diubah. Pastikan seluruh jawaban sudah sesuai sebelum melanjutkan.</p>
         <div className="modal-actions">
           <button className="secondary-button" onClick={onCancel}>Kembali</button>
-          <button className="primary-button" onClick={onConfirm}>Selesaikan Tes</button>
+          <button className="primary-button" onClick={onConfirm}>Ya, Submit Sekarang</button>
         </div>
       </div>
     </div>
@@ -265,7 +266,7 @@ const IconCheck = () => (
 
 function CompletionScreen() {
   return (
-    <main className="figma-login praktikan-figma-login">
+    <main className="figma-login functional-page">
       <QuizHeader hideMeta />
       <CenterStage className="figma-login-stage completion-stage">
         <GlassCard className="completion-card figma-login-card">
@@ -301,6 +302,16 @@ function UjianExam({
   const [showFinishDialog, setShowFinishDialog] = useState(false);
   const [message, setMessage] = useState("");
   const [batches] = useState(() => getExamBatchesByAttendance(participant.attendanceNumber));
+  const allowNavigation = useBeforeUnload(started);
+
+  useEffect(() => {
+    const syncId = window.setTimeout(() => {
+      const stored = sessionStorage.getItem("webquiz-answers-post-test");
+      if (!stored) return;
+      try { setAnswers(JSON.parse(stored) as AnswerMap); } catch { sessionStorage.removeItem("webquiz-answers-post-test"); }
+    }, 0);
+    return () => window.clearTimeout(syncId);
+  }, []);
 
   const currentQuestions = batches[activeBatch];
   const currentQuestion = currentQuestions[currentNumber - 1] as MockQuestion | undefined;
@@ -316,7 +327,11 @@ function UjianExam({
   }
 
   function saveAnswer(answer: string) {
-    setAnswers((prev) => ({ ...prev, [currentKey]: answer }));
+    setAnswers((prev) => {
+      const next = { ...prev, [currentKey]: answer };
+      sessionStorage.setItem("webquiz-answers-post-test", JSON.stringify(next));
+      return next;
+    });
     setMessage("Jawaban tersimpan");
     window.setTimeout(() => setMessage(""), 1400);
   }
@@ -325,6 +340,7 @@ function UjianExam({
     if (currentNumber < currentQuestions.length) { setCurrentNumber(currentNumber + 1); return; }
     if (activeBatch === "pilihanGanda") selectBatch("essay");
     else if (activeBatch === "essay") selectBatch("kasus");
+    else if (answeredCount < totalQuestions) setMessage(`Lengkapi ${totalQuestions - answeredCount} soal yang belum terjawab.`);
     else setShowFinishDialog(true);
   }
 
@@ -347,7 +363,7 @@ function UjianExam({
               <p className="eyebrow">{batchLabel}</p>
               <p className="exam-progress-label">Soal {currentNumber} dari {currentQuestions.length}</p>
             </div>
-            <span className="save-indicator">{message || "Jawaban tersimpan otomatis"}</span>
+            <span className={`save-indicator ${message.startsWith("Lengkapi") ? "exam-alert-warning" : ""}`} role={message.startsWith("Lengkapi") ? "alert" : undefined}>{message || "Jawaban tersimpan otomatis"}</span>
           </div>
           <GlassCard className="exam-question-card">
             <span className="question-type">{isChoice ? "Pilihan ganda" : isCase ? "Kasus" : "Essay"}</span>
@@ -370,7 +386,7 @@ function UjianExam({
         <QuestionNavigator activeBatch={activeBatch} batches={batches} answers={answers} currentNumber={currentNumber} onSelect={selectBatch} totalQuestions={totalQuestions} answeredCount={answeredCount} />
       </div>
       <footer className="exam-dashboard-footer">LABORATORIUM PSIKOLOGI</footer>
-      {showFinishDialog && <FinishDialog onCancel={() => setShowFinishDialog(false)} onConfirm={() => { window.location.href = completionHref; }} />}
+      {showFinishDialog && <FinishDialog onCancel={() => setShowFinishDialog(false)} onConfirm={() => { allowNavigation(); sessionStorage.removeItem("webquiz-answers-post-test"); window.location.href = completionHref; }} />}
     </main>
   );
 }
@@ -380,17 +396,29 @@ function UjianExam({
 function LinearExam({
   participant,
   sesiLabel,
+  completionHref,
 }: {
   participant: { name: string; attendanceNumber: number };
   sesiLabel: string;
+  completionHref: string;
 }) {
   const [started, setStarted] = useState(false);
-  const [finished, setFinished] = useState(false);
+
   const [currentNumber, setCurrentNumber] = useState(1);
   const [answers, setAnswers] = useState<AnswerMap>({});
   const [showFinishDialog, setShowFinishDialog] = useState(false);
   const [message, setMessage] = useState("");
   const [questions] = useState(() => getLinearEssayBatch(participant.attendanceNumber));
+  const allowNavigation = useBeforeUnload(started);
+
+  useEffect(() => {
+    const syncId = window.setTimeout(() => {
+      const stored = sessionStorage.getItem("webquiz-answers-quiz");
+      if (!stored) return;
+      try { setAnswers(JSON.parse(stored) as AnswerMap); } catch { sessionStorage.removeItem("webquiz-answers-quiz"); }
+    }, 0);
+    return () => window.clearTimeout(syncId);
+  }, []);
 
   const currentKey = `essay-${currentNumber}`;
   const currentAnswer = answers[currentKey] ?? "";
@@ -398,13 +426,21 @@ function LinearExam({
   const answeredCount = Object.keys(answers).length;
 
   function saveAnswer(answer: string) {
-    setAnswers((prev) => ({ ...prev, [currentKey]: answer }));
+    setAnswers((prev) => {
+      const next = { ...prev, [currentKey]: answer };
+      sessionStorage.setItem("webquiz-answers-quiz", JSON.stringify(next));
+      return next;
+    });
     setMessage("Jawaban tersimpan");
     window.setTimeout(() => setMessage(""), 1400);
   }
 
   function nextQuestion() {
     if (currentNumber < questions.length) { setCurrentNumber(currentNumber + 1); return; }
+    if (answeredCount < questions.length) {
+      setMessage(`Lengkapi ${questions.length - answeredCount} soal yang belum terjawab.`);
+      return;
+    }
     setShowFinishDialog(true);
   }
 
@@ -413,7 +449,7 @@ function LinearExam({
   }
 
   if (!started) return <PreflightScreen participantName={participant.name} sesiLabel={sesiLabel} onStart={() => setStarted(true)} />;
-  if (finished) return <CompletionScreen />;
+
   if (!currentQuestion) return null;
 
   return (
@@ -428,7 +464,7 @@ function LinearExam({
               <p className="eyebrow">Essay</p>
               <p className="exam-progress-label">Soal {currentNumber} dari {questions.length}</p>
             </div>
-            <span className="save-indicator">{message || "Jawaban tersimpan otomatis"}</span>
+            <span className={`save-indicator ${message.startsWith("Lengkapi") ? "exam-alert-warning" : ""}`} role={message.startsWith("Lengkapi") ? "alert" : undefined}>{message || "Jawaban tersimpan otomatis"}</span>
           </div>
           <GlassCard className="exam-question-card">
             <span className="question-type">Essay</span>
@@ -451,7 +487,7 @@ function LinearExam({
         <LinearNavigator questions={questions} answers={answers} currentNumber={currentNumber} answeredCount={answeredCount} onSelect={setCurrentNumber} />
       </div>
       <footer className="exam-dashboard-footer">LABORATORIUM PSIKOLOGI</footer>
-      {showFinishDialog && <FinishDialog onCancel={() => setShowFinishDialog(false)} onConfirm={() => { setFinished(true); setShowFinishDialog(false); }} />}
+      {showFinishDialog && <FinishDialog onCancel={() => setShowFinishDialog(false)} onConfirm={() => { allowNavigation(); sessionStorage.removeItem("webquiz-answers-quiz"); window.location.href = completionHref; }} />}
     </main>
   );
 }
@@ -480,14 +516,16 @@ function ExamPageInner() {
   if (isCompletion) return <CompletionScreen />;
 
   return isLinear
-    ? <LinearExam participant={participant} sesiLabel={sesiLabel} />
+    ? <LinearExam participant={participant} sesiLabel={sesiLabel} completionHref="/exam?status=selesai" />
     : <UjianExam participant={participant} sesiLabel={sesiLabel} completionHref="/kesan-pesan" />;
 }
 
 export default function ExamPage() {
   return (
-    <Suspense>
-      <ExamPageInner />
-    </Suspense>
+    <ParticipantRouteGuard>
+      <Suspense>
+        <ExamPageInner />
+      </Suspense>
+    </ParticipantRouteGuard>
   );
 }

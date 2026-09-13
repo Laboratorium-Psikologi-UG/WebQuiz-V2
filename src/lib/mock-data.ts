@@ -41,6 +41,7 @@ export type QuestionBankSummary = {
   count: number;
   kelas: string;
   status: string;
+  session?: string;
 };
 
 export type MockAdminUser = {
@@ -267,9 +268,9 @@ export const mockExamSessions: MockExamSession[] = [
 ];
 
 export const mockQuestionBankSummary: QuestionBankSummary[] = [
-  { id: "qb-1", type: "Pilihan Ganda", count: 15, kelas: "3PA01", status: "Aktif" },
-  { id: "qb-2", type: "Essay", count: 8, kelas: "3PA01", status: "Aktif" },
-  { id: "qb-3", type: "Kasus", count: 4, kelas: "3PA02", status: "Aktif" },
+  { id: "qb-1", type: "Pilihan Ganda", count: 15, kelas: "3PA01", status: "Aktif", session: "Post-test Praktikum 02" },
+  { id: "qb-2", type: "Essay", count: 8, kelas: "3PA01", status: "Aktif", session: "Quiz Praktikum" },
+  { id: "qb-3", type: "Kasus", count: 4, kelas: "3PA02", status: "Aktif", session: "Post-test Praktikum 02" },
 ];
 
 export const mockAdminUsers: MockAdminUser[] = [

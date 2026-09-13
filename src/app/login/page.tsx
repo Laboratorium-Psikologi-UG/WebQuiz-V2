@@ -3,26 +3,63 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { GlassCard, QuizHeader } from "@/components/quiz-ui";
+import { useToast } from "@/components/toast";
+
+type ParticipantLoginData = {
+	name: string;
+	npm: string;
+	className: string;
+	attendanceNumber: string;
+	token: string;
+};
+
+type ReviewIconKind = "user" | "id" | "class" | "number";
+
+function ReviewIcon({ kind }: { kind: ReviewIconKind }) {
+	return (
+		<svg aria-hidden="true" className="login-review-svg" fill="none" height="16" viewBox="0 0 24 24" width="16">
+			{kind === "user" && <><circle cx="12" cy="8" r="3" /><path d="M5 20c0-3.3 2.7-5 7-5s7 1.7 7 5" /></>}
+			{kind === "id" && <><rect height="14" rx="2" width="18" x="3" y="5" /><circle cx="8" cy="11" r="2" /><path d="M13 10h5M13 14h4" /></>}
+			{kind === "class" && <><path d="m3 8 9-4 9 4-9 4-9-4Z" /><path d="M6 10v4c3 2 9 2 12 0v-4" /></>}
+			{kind === "number" && <><path d="M9 3 7 21M17 3l-2 18M4 9h17M3 15h17" /></>}
+		</svg>
+	);
+}
 
 export default function PraktikanLoginPage() {
 	const [error, setError] = useState("");
+	const [pendingLogin, setPendingLogin] = useState<ParticipantLoginData | null>(null);
+	const [loading, setLoading] = useState(false);
 	const router = useRouter();
+	const { showToast } = useToast();
 
 	function handleSubmit(event: FormEvent<HTMLFormElement>) {
 		event.preventDefault();
+		if (loading || pendingLogin) return;
 		const values = new FormData(event.currentTarget);
-		const name = String(values.get("name") ?? "").trim();
-		const npm = String(values.get("npm") ?? "").trim();
-		const className = String(values.get("class") ?? "").trim();
-		const attendanceNumber = String(values.get("attendanceNumber") ?? "").trim();
-		const token = String(values.get("token") ?? "").trim();
-		if (!name || !npm || !className || !attendanceNumber || !token) {
+		const data: ParticipantLoginData = {
+			name: String(values.get("name") ?? "").trim(),
+			npm: String(values.get("npm") ?? "").trim(),
+			className: String(values.get("class") ?? "").trim(),
+			attendanceNumber: String(values.get("attendanceNumber") ?? "").trim(),
+			token: String(values.get("token") ?? "").trim(),
+		};
+		if (!data.name || !data.npm || !data.className || !data.attendanceNumber || !data.token) {
 			setError("Lengkapi identitas dan token sebelum melanjutkan.");
+			showToast("Lengkapi identitas dan token terlebih dahulu.", "warning");
 			return;
 		}
 		setError("");
-		sessionStorage.setItem("webquiz-participant", JSON.stringify({ name, npm, className, attendanceNumber, token }));
-		router.push("/dashboard");
+		setPendingLogin(data);
+	}
+
+	function confirmLogin() {
+		if (!pendingLogin || loading) return;
+		setLoading(true);
+		sessionStorage.setItem("webquiz-participant", JSON.stringify(pendingLogin));
+		setPendingLogin(null);
+		showToast("Login berhasil.", "success");
+		window.setTimeout(() => router.push("/dashboard"), 350);
 	}
 
 	return (
@@ -43,11 +80,31 @@ export default function PraktikanLoginPage() {
 						<label htmlFor="token">Token</label>
 						<input id="token" name="token" autoComplete="one-time-code" aria-invalid={Boolean(error)} />
 						{error && <p className="figma-form-error" role="alert">{error}</p>}
-						<button className="figma-submit" type="submit">Masuk ke tes</button>
+						<button className="figma-submit" disabled={loading} type="submit">{loading ? <><span className="button-spinner" />Memeriksa...</> : "Masuk ke tes"}</button>
 					</form>
 				</GlassCard>
 			</section>
 			<footer className="figma-login-footer">LABORATORIUM PSIKOLOGI</footer>
+			{pendingLogin && (
+				<div className="modal-backdrop" onClick={() => setPendingLogin(null)}>
+					<div aria-labelledby="participant-review-title" aria-modal="true" className="modal-card confirmation-dialog" onClick={(event) => event.stopPropagation()} role="dialog">
+						<span aria-hidden="true" className="confirmation-icon confirmation-icon-warning">!</span>
+						<h2 id="participant-review-title">Konfirmasi data praktikan</h2>
+						<p className="modal-description">Pastikan data berikut sudah benar sebelum melanjutkan.</p>
+						<dl className="login-review-list">
+							<div className="login-review-item"><span className="login-review-icon"><ReviewIcon kind="user" /></span><div className="login-review-copy"><dt>Nama</dt><dd>{pendingLogin.name}</dd></div></div>
+							<div className="login-review-item"><span className="login-review-icon"><ReviewIcon kind="id" /></span><div className="login-review-copy"><dt>NPM</dt><dd>{pendingLogin.npm}</dd></div></div>
+							<div className="login-review-item"><span className="login-review-icon"><ReviewIcon kind="class" /></span><div className="login-review-copy"><dt>Kelas</dt><dd>{pendingLogin.className}</dd></div></div>
+							<div className="login-review-item"><span className="login-review-icon"><ReviewIcon kind="number" /></span><div className="login-review-copy"><dt>No. Absen</dt><dd>{pendingLogin.attendanceNumber}</dd></div></div>
+						</dl>
+						<p className="modal-description">Apakah data di atas sudah benar?</p>
+						<div className="modal-actions">
+							<button className="secondary-button" onClick={() => setPendingLogin(null)} type="button">Periksa Lagi</button>
+							<button className="primary-button" onClick={confirmLogin} type="button">Ya, Lanjutkan</button>
+						</div>
+					</div>
+				</div>
+			)}
 		</main>
 	);
 }

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AdminSidebar } from "@/components/admin-ui";
+import { AdminRouteGuard, AdminSidebar } from "@/components/admin-ui";
 import { GlassCard, QuizHeader } from "@/components/quiz-ui";
 
 const recentExams = [
@@ -16,6 +16,7 @@ const overviewCards = [
 
 export default function AdminDashboardPage() {
   return (
+    <AdminRouteGuard>
     <main className="admin-dashboard-shell">
       <QuizHeader adminName="PROG" adminRole="superadmin" logoutHref="/admin/login" />
       <div className="admin-dashboard-body">
@@ -26,7 +27,7 @@ export default function AdminDashboardPage() {
             <Link className="primary-button" href="/admin/exam-management">Buat sesi ujian</Link>
           </div>
           <div className="admin-dashboard-overview">
-            {overviewCards.map((card) => <Link className={`admin-overview-card ${card.featured ? "featured" : ""}`} href={card.href} key={card.label}><span className="admin-overview-label">{card.label}</span><strong>{card.value}</strong><span className="admin-overview-action">{card.action} -&gt;</span></Link>)}
+            {overviewCards.map((card) => <Link className={`glass-card admin-overview-card ${card.featured ? "featured" : ""}`} href={card.href} key={card.label}><span className="admin-overview-label">{card.label}</span><strong>{card.value}</strong><span className="admin-overview-action">{card.action} -&gt;</span></Link>)}
           </div>
           <GlassCard className="admin-activity-card">
             <div className="admin-panel-heading"><div><h2>Aktivitas ujian terbaru</h2><p>Ringkasan sesi ujian yang paling baru diperbarui.</p></div><Link className="text-button" href="/admin/exam-management">Lihat semua</Link></div>
@@ -38,5 +39,6 @@ export default function AdminDashboardPage() {
       </div>
       <footer className="admin-dashboard-footer">LABORATORIUM PSIKOLOGI</footer>
     </main>
+    </AdminRouteGuard>
   );
 }

@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { TRPCProvider } from "@/lib/trpc/Provider";
+import { ToastProvider } from "@/components/toast";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -21,7 +22,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       className={`${inter.variable} h-full antialiased`}
     >
       <body className="min-h-full">
-        <TRPCProvider>{children}</TRPCProvider>
+        <TRPCProvider><ToastProvider>{children}</ToastProvider></TRPCProvider>
       </body>
     </html>
   );

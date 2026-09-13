@@ -1,13 +1,33 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState, type ReactNode } from "react";
 
 export type AdminMenuItem = {
   label: string;
   href: string;
   glyph: string;
 };
+
+export function AdminRouteGuard({ children }: { children: ReactNode }) {
+  const router = useRouter();
+  const [checking, setChecking] = useState(true);
+  const [authorized, setAuthorized] = useState(false);
+
+  useEffect(() => {
+    const checkId = window.setTimeout(() => {
+      const isAdmin = sessionStorage.getItem("webquiz-admin") === "true";
+      if (!isAdmin) router.replace("/admin/login");
+      setAuthorized(isAdmin);
+      setChecking(false);
+    }, 0);
+    return () => window.clearTimeout(checkId);
+  }, [router]);
+
+  if (checking || !authorized) return null;
+  return <>{children}</>;
+}
 
 export const adminMenuItems: AdminMenuItem[] = [
   { label: "Dashboard", href: "/admin/dashboard", glyph: "▣" },
@@ -23,7 +43,7 @@ export function AdminSidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="admin-dashboard-sidebar">
+    <aside className="glass-card admin-dashboard-sidebar">
       <div className="admin-dashboard-sidebar-title">Dashboard<br />Admin</div>
       <nav aria-label="Admin menu" className="admin-dashboard-nav">
         {adminMenuItems.map((item) => (

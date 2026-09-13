@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { CenterStage, GlassCard, QuizHeader } from "@/components/quiz-ui";
+import { CenterStage, GlassCard, ParticipantRouteGuard, QuizHeader } from "@/components/quiz-ui";
 
 type Participant = {
   name: string;
@@ -52,7 +52,8 @@ export default function PraktikanDashboardPage() {
   }, []);
 
   return (
-    <main className="figma-login praktikan-figma-login">
+    <ParticipantRouteGuard>
+    <main className="figma-login praktikan-figma-login praktikan-dashboard-page">
       <QuizHeader dashboardName={participantName} />
 
       <CenterStage className="praktikan-dashboard-stage figma-login-stage">
@@ -74,5 +75,6 @@ export default function PraktikanDashboardPage() {
 
       <footer className="figma-login-footer">LABORATORIUM PSIKOLOGI</footer>
     </main>
+    </ParticipantRouteGuard>
   );
 }
