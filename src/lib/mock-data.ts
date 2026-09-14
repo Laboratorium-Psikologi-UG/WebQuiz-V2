@@ -1,5 +1,15 @@
 export type QuestionType = "multiple-choice" | "essay" | "case";
 
+/**
+ * Temporary frontend-only credentials used when NEXT_PUBLIC_USE_MOCK_AUTH=true.
+ * TODO: remove mock auth fallback once auth/adminAuth procedures are implemented.
+ */
+export const mockAuthCredentials = {
+  participantToken: "DEMO1234",
+  adminUsername: "admin",
+  adminPassword: "admin123",
+};
+
 export type MockQuestion = {
   id: string;
   prompt: string;

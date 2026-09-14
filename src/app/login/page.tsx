@@ -4,11 +4,14 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { GlassCard, QuizHeader } from "@/components/quiz-ui";
 import { useToast } from "@/components/toast";
+import { trpc } from "@/lib/trpc/client";
+import { mockAuthCredentials } from "@/lib/mock-data";
 
 type ParticipantLoginData = {
 	name: string;
 	npm: string;
 	className: string;
+	kelasId: string;
 	attendanceNumber: string;
 	token: string;
 };
@@ -29,18 +32,20 @@ function ReviewIcon({ kind }: { kind: ReviewIconKind }) {
 export default function PraktikanLoginPage() {
 	const [error, setError] = useState("");
 	const [pendingLogin, setPendingLogin] = useState<ParticipantLoginData | null>(null);
-	const [loading, setLoading] = useState(false);
-	const router = useRouter();
+		const router = useRouter();
 	const { showToast } = useToast();
+	const useMockAuth = process.env.NEXT_PUBLIC_USE_MOCK_API !== "false";
+	const redeemMutation = trpc.auth.redeem.useMutation();
 
 	function handleSubmit(event: FormEvent<HTMLFormElement>) {
 		event.preventDefault();
-		if (loading || pendingLogin) return;
+		if (redeemMutation.isPending || pendingLogin) return;
 		const values = new FormData(event.currentTarget);
 		const data: ParticipantLoginData = {
 			name: String(values.get("name") ?? "").trim(),
 			npm: String(values.get("npm") ?? "").trim(),
 			className: String(values.get("class") ?? "").trim(),
+			kelasId: String(values.get("class") ?? "").trim(),
 			attendanceNumber: String(values.get("attendanceNumber") ?? "").trim(),
 			token: String(values.get("token") ?? "").trim(),
 		};
@@ -54,12 +59,37 @@ export default function PraktikanLoginPage() {
 	}
 
 	function confirmLogin() {
-		if (!pendingLogin || loading) return;
-		setLoading(true);
-		sessionStorage.setItem("webquiz-participant", JSON.stringify(pendingLogin));
-		setPendingLogin(null);
-		showToast("Login berhasil.", "success");
-		window.setTimeout(() => router.push("/dashboard"), 350);
+		if (!pendingLogin || redeemMutation.isPending) return;
+		// TODO: remove mock auth fallback once auth procedure is implemented.
+		if (useMockAuth) {
+			if (pendingLogin.token !== mockAuthCredentials.participantToken) {
+				showToast(`Gunakan token demo ${mockAuthCredentials.participantToken}.`, "error");
+				return;
+			}
+			sessionStorage.setItem("webquiz-participant", JSON.stringify(pendingLogin));
+			setPendingLogin(null);
+			showToast("Login demo berhasil.", "success");
+			router.push("/dashboard");
+			return;
+		}
+		// Contract saat ini meminta kelas sebagai kelasId number, sedangkan UI
+		// sengaja menerima kode kelas bebas seperti 3PA00. Cast ini hanya menjaga
+		// client tetap bisa dikompilasi; backend akan memvalidasi mismatch tersebut.
+		redeemMutation.mutate({
+			code: pendingLogin.token,
+			npm: pendingLogin.npm,
+			name: pendingLogin.name,
+			kelasId: pendingLogin.kelasId as unknown as number,
+			attendanceNo: Number(pendingLogin.attendanceNumber),
+		}, {
+			onSuccess: ({ redirect }) => {
+				sessionStorage.setItem("webquiz-participant", JSON.stringify(pendingLogin));
+				setPendingLogin(null);
+				showToast("Login berhasil.", "success");
+				router.push(redirect === "/exam" ? "/dashboard" : redirect);
+			},
+			onError: () => showToast("Login belum dapat diproses. Coba lagi setelah layanan backend siap.", "error"),
+		});
 	}
 
 	return (
@@ -74,13 +104,13 @@ export default function PraktikanLoginPage() {
 						<label htmlFor="npm">NPM</label>
 						<input id="npm" name="npm" inputMode="numeric" aria-invalid={Boolean(error)} />
 						<div className="figma-form-row">
-							<div><label htmlFor="class">Kelas</label><input id="class" name="class" aria-invalid={Boolean(error)} /></div>
+							<div><label htmlFor="class">Kelas</label><input aria-invalid={Boolean(error)} id="class" name="class" /></div>
 							<div><label htmlFor="attendanceNumber">No. absen</label><input id="attendanceNumber" name="attendanceNumber" inputMode="numeric" aria-invalid={Boolean(error)} /></div>
 						</div>
 						<label htmlFor="token">Token</label>
 						<input id="token" name="token" autoComplete="one-time-code" aria-invalid={Boolean(error)} />
-						{error && <p className="figma-form-error" role="alert">{error}</p>}
-						<button className="figma-submit" disabled={loading} type="submit">{loading ? <><span className="button-spinner" />Memeriksa...</> : "Masuk ke tes"}</button>
+						{(error || redeemMutation.error) && <p className="figma-form-error" role="alert">{error || "Login belum dapat diproses oleh server."}</p>}
+						<button className="figma-submit" disabled={redeemMutation.isPending} type="submit">{redeemMutation.isPending ? <><span className="button-spinner" />Memeriksa...</> : "Masuk ke tes"}</button>
 					</form>
 				</GlassCard>
 			</section>
@@ -100,7 +130,7 @@ export default function PraktikanLoginPage() {
 						<p className="modal-description">Apakah data di atas sudah benar?</p>
 						<div className="modal-actions">
 							<button className="secondary-button" onClick={() => setPendingLogin(null)} type="button">Periksa Lagi</button>
-							<button className="primary-button" onClick={confirmLogin} type="button">Ya, Lanjutkan</button>
+							<button className="primary-button" disabled={redeemMutation.isPending} onClick={confirmLogin} type="button">{redeemMutation.isPending ? <><span className="button-spinner" />Memeriksa...</> : "Ya, Lanjutkan"}</button>
 						</div>
 					</div>
 				</div>

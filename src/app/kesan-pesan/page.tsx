@@ -4,10 +4,9 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CenterStage, GlassCard, ParticipantRouteGuard, QuizHeader, useBeforeUnload } from "@/components/quiz-ui";
 import { useToast } from "@/components/toast";
+import { trpc } from "@/lib/trpc/client";
+import { MOCK_API_ENABLED, mockSubmitFeedback } from "@/lib/mock-service";
 
-type ParticipantSession = {
-  className?: string;
-};
 
 export default function KesanPesanPage() {
   const router = useRouter();
@@ -17,6 +16,7 @@ export default function KesanPesanPage() {
   const [submitted, setSubmitted] = useState(false);
   const { showToast } = useToast();
   const allowNavigation = useBeforeUnload(!submitted);
+  const submitMutation = trpc.feedback.submit.useMutation();
 
 
   function submitFeedback(event: FormEvent<HTMLFormElement>) {
@@ -27,30 +27,35 @@ export default function KesanPesanPage() {
       return;
     }
 
-    let className = "Tidak diketahui";
+    let kelas = "Tidak diketahui";
     try {
-      const raw = sessionStorage.getItem("webquiz-participant");
-      if (raw) className = (JSON.parse(raw) as ParticipantSession).className || className;
+      const participant = JSON.parse(sessionStorage.getItem("webquiz-participant") ?? "{}");
+      kelas = participant.className || kelas;
     } catch {
-      // Gunakan fallback kelas tanpa membaca atau menyimpan identitas peserta.
+      // Keep anonymous fallback class for the mock service.
     }
-
-    // Data feedback sengaja hanya berisi kelas dan isi anonim—tanpa nama/NPM.
-    const feedback = { className, kesan: kesan.trim(), pesan: pesan.trim() };
-    try {
-      const stored = localStorage.getItem("webquiz-feedback");
-      const parsed = stored ? JSON.parse(stored) : [];
-      const existing = Array.isArray(parsed) ? parsed : [];
-      localStorage.setItem("webquiz-feedback", JSON.stringify([...existing, feedback]));
-    } catch {
-      setError("Feedback belum dapat disimpan. Coba lagi.");
-      showToast("Feedback belum dapat disimpan. Coba lagi.", "error");
+    if (MOCK_API_ENABLED) {
+      mockSubmitFeedback({ kelas, kesan: kesan.trim(), pesan: pesan.trim() });
+      sessionStorage.setItem("webquiz-feedback-submitted", "true");
+      setSubmitted(true);
+      allowNavigation();
+      showToast("Kesan dan pesan berhasil dikirim.", "success");
+      router.push("/exam?status=selesai");
       return;
     }
-    sessionStorage.setItem("webquiz-feedback-submitted", "true");
-    setSubmitted(true);
-    allowNavigation();
-    router.push("/exam?status=selesai");
+    submitMutation.mutate({ kesan: kesan.trim(), pesan: pesan.trim() }, {
+      onSuccess: () => {
+        sessionStorage.setItem("webquiz-feedback-submitted", "true");
+        setSubmitted(true);
+        allowNavigation();
+        showToast("Kesan dan pesan berhasil dikirim.", "success");
+        router.push("/exam?status=selesai");
+      },
+      onError: () => {
+        setError("Feedback belum dapat dikirim. Coba lagi.");
+        showToast("Feedback belum dapat dikirim. Coba lagi.", "error");
+      },
+    });
   }
 
   return (
@@ -70,7 +75,7 @@ export default function KesanPesanPage() {
             <label htmlFor="pesan">Pesan untuk asisten</label>
             <textarea id="pesan" value={pesan} onChange={(event) => setPesan(event.target.value)} placeholder="Apa yang ingin Anda sampaikan kepada asisten?" />
             {error && <p className="feedback-error" role="alert">{error}</p>}
-            <button className="primary-button feedback-submit" disabled={submitted} type="submit">Kirim dan Selesai</button>
+            <button className="primary-button feedback-submit" disabled={submitted || submitMutation.isPending} type="submit">{submitMutation.isPending ? "Mengirim..." : "Kirim dan Selesai"}</button>
           </form>
         </GlassCard>
       </CenterStage>

@@ -4,18 +4,19 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { GlassCard, QuizHeader } from "@/components/quiz-ui";
 import { useToast } from "@/components/toast";
-
-const DEMO_USERNAME = "admin";
-const DEMO_PASSWORD = "admin123";
+import { trpc } from "@/lib/trpc/client";
+import { mockAuthCredentials } from "@/lib/mock-data";
 
 export default function AdminLoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<{ username?: string; password?: string; form?: string }>({});
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { showToast } = useToast();
+  const useMockAuth = process.env.NEXT_PUBLIC_USE_MOCK_API !== "false";
+  const loginMutation = trpc.adminAuth.login.useMutation();
+  const loading = loginMutation.isPending;
 
   function validate() {
     const next: typeof errors = {};
@@ -33,19 +34,36 @@ export default function AdminLoginPage() {
       showToast("Lengkapi field yang wajib diisi.", "warning");
       return;
     }
-    setLoading(true);
-    window.setTimeout(() => {
-      if (username.trim() !== DEMO_USERNAME || password !== DEMO_PASSWORD) {
+    // TODO: remove mock auth fallback once adminAuth procedure is implemented.
+    if (useMockAuth) {
+      if (username.trim() !== mockAuthCredentials.adminUsername || password !== mockAuthCredentials.adminPassword) {
         setErrors({ form: "Username atau password salah." });
-        setLoading(false);
         showToast("Username atau password salah.", "error");
         return;
       }
       setErrors({});
       sessionStorage.setItem("webquiz-admin", "true");
-      showToast("Login berhasil.", "success");
+      showToast("Login demo berhasil.", "success");
       router.push("/admin/dashboard");
-    }, 450);
+      return;
+    }
+    loginMutation.mutate({ username: username.trim(), password }, {
+      onSuccess: ({ ok }) => {
+        if (!ok) {
+          setErrors({ form: "Username atau password salah." });
+          showToast("Username atau password salah.", "error");
+          return;
+        }
+        setErrors({});
+        sessionStorage.setItem("webquiz-admin", "true");
+        showToast("Login berhasil.", "success");
+        router.push("/admin/dashboard");
+      },
+      onError: () => {
+        setErrors({ form: "Username atau password salah." });
+        showToast("Username atau password salah.", "error");
+      },
+    });
   }
 
   return (

@@ -1,5 +1,6 @@
 @import "tailwindcss";
 
+
 :root {
   --background: #f4f3f5;
   --foreground: #171b2d;
@@ -874,4 +875,52 @@ button { cursor: pointer; }
 }
 @media (max-width: 620px) {
   .toast-stack { top: 88px; left: 50%; width: calc(100vw - 32px); }
+}
+
+/* Exam visual hierarchy refinements */
+.exam-progress-bar { position: relative; z-index: 2; width: 100%; height: 5px; overflow: hidden; background: color-mix(in srgb, var(--primary) 12%, transparent); }
+.exam-progress-bar span { display: block; height: 100%; border-radius: 0 999px 999px 0; background: var(--primary); box-shadow: 0 0 12px color-mix(in srgb, var(--primary) 42%, transparent); transition: width 360ms ease; }
+.exam-breadcrumb { display: flex; min-width: 0; align-items: center; flex-wrap: wrap; gap: 9px; color: var(--neutral); font-size: 13px; font-weight: 600; letter-spacing: .01em; }
+.exam-breadcrumb b { color: color-mix(in srgb, var(--primary) 42%, var(--neutral)); font-size: 17px; font-weight: 400; }
+.exam-breadcrumb strong { color: var(--primary); font-weight: 800; }
+.exam-answer-wrap { position: relative; }
+.exam-answer-wrap .exam-answer { padding-bottom: 34px; }
+.character-counter { position: absolute; right: 14px; bottom: 11px; color: var(--neutral); font-size: 11px; font-weight: 600; pointer-events: none; }
+.timer-ring { width: 42px; height: 42px; transform: rotate(-90deg); flex: 0 0 auto; }
+.timer-ring-track, .timer-ring-progress { fill: none; stroke-width: 3; }
+.timer-ring-track { stroke: rgb(255 255 255 / 25%); }
+.timer-ring-progress { stroke: var(--white); stroke-linecap: round; transition: stroke-dashoffset 600ms linear, stroke 200ms ease; }
+.exam-dashboard .exam-timer { display: flex; align-items: center; justify-content: center; gap: 12px; min-height: 78px; padding: 14px 18px; }
+.exam-timer > span { display: grid; gap: 2px; text-align: left; }
+.exam-timer small { color: rgb(255 255 255 / 72%); font-size: 10px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
+.exam-timer.is-low { background: var(--error); }
+.exam-timer.is-low .timer-ring-progress { stroke: #fed7aa; }
+.exam-dashboard-body { grid-template-columns: minmax(180px, 205px) minmax(0, 1fr) minmax(220px, 28%); align-items: start; max-width: 1520px; margin: 0 auto; }
+.exam-dashboard-body--linear { grid-template-columns: minmax(0, 1fr) minmax(220px, 28%); }
+.exam-question-area { justify-content: start; }
+.exam-question-card { width: 100%; max-width: none; min-height: 430px; padding: 42px 46px 36px; box-shadow: 0 16px 42px rgb(0 0 0 / 16%), inset 0 1px 0 rgb(255 255 255 / 62%); }
+.exam-question-card h1 { max-width: 880px; font-size: clamp(24px, 2.5vw, 32px); line-height: 1.42; }
+.exam-navigator { align-self: stretch; position: sticky; top: 104px; height: fit-content; box-shadow: 0 8px 24px rgb(0 0 0 / 9%), inset 0 1px 0 rgb(255 255 255 / 58%); }
+.question-number { cursor: pointer; transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease, background 180ms ease, color 180ms ease; }
+.question-number:hover { transform: scale(1.06); box-shadow: 0 5px 12px rgb(0 0 0 / 12%); }
+.question-number.answered { box-shadow: inset 0 0 0 2px var(--primary), 0 2px 7px rgb(0 0 0 / 7%); }
+@media (max-width: 1100px) {
+  .exam-dashboard-body { grid-template-columns: 170px minmax(0, 1fr) 220px; gap: 16px; padding-inline: 18px; }
+  .exam-dashboard-body--linear { grid-template-columns: minmax(0, 1fr) 220px; }
+  .exam-question-card { padding-inline: 32px; }
+}
+@media (max-width: 900px) {
+  .exam-navigator { position: static; }
+  .exam-dashboard-body { grid-template-columns: 150px minmax(0, 1fr); }
+  .exam-dashboard-body > .exam-navigator { grid-column: 1 / -1; }
+  .exam-dashboard-body--linear { grid-template-columns: minmax(0, 1fr); }
+  .exam-dashboard-body--linear > .exam-navigator { grid-column: auto; }
+}
+@media (max-width: 620px) {
+  .exam-dashboard-body, .exam-dashboard-body--linear { display: flex; flex-direction: column; gap: 14px; padding: 16px; }
+  .exam-dashboard-body > * { width: 100%; }
+  .exam-question-card { min-height: 0; padding: 30px 22px 26px; }
+  .exam-question-card h1 { font-size: 23px; line-height: 1.38; }
+  .exam-breadcrumb { gap: 6px; font-size: 12px; }
+  .exam-navigator { position: static; }
 }

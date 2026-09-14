@@ -6,21 +6,58 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { CenterStage, GlassCard, ParticipantRouteGuard, QuizHeader, useBeforeUnload } from "@/components/quiz-ui";
-import {
-  getExamBatchesByAttendance,
-  getLinearEssayBatch,
-  MockQuestion,
-} from "@/lib/mock-data";
+import { trpc } from "@/lib/trpc/client";
+import { MOCK_API_ENABLED, mockSaveAnswer, mockStartExam, mockSubmitExam } from "@/lib/mock-service";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 type BatchKey = "pilihanGanda" | "essay" | "kasus";
 type SesiKey = "quiz" | "post-test";
 type AnswerMap = Record<string, string>;
+type ExamQuestion = {
+  id: number;
+  prompt: string;
+  type: "mc" | "fill";
+  options?: { id: number; text: string }[];
+  stimulusUrls: string[];
+};
+type UiQuestion = ExamQuestion & { imageUrl?: string };
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const OPTIONS = ["Sangat tidak sesuai", "Tidak sesuai", "Sesuai", "Sangat sesuai"];
+
+function ExamProgressBar({ answered, total }: { answered: number; total: number }) {
+  const progress = total > 0 ? Math.min(100, Math.round((answered / total) * 100)) : 0;
+  return <div aria-label={`Progress tes ${progress}%`} className="exam-progress-bar" role="progressbar" aria-valuemax={100} aria-valuemin={0} aria-valuenow={progress}><span style={{ width: `${progress}%` }} /></div>;
+}
+
+function TimerDisplay() {
+  const totalSeconds = 15 * 60;
+  const [remaining, setRemaining] = useState(12 * 60 + 32);
+  useEffect(() => {
+    const timer = window.setInterval(() => setRemaining((value) => Math.max(0, value - 1)), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+  const ratio = remaining / totalSeconds;
+  const circumference = 2 * Math.PI * 17;
+  const minutes = Math.floor(remaining / 60).toString().padStart(2, "0");
+  const seconds = (remaining % 60).toString().padStart(2, "0");
+  return <div className={`exam-timer ${ratio < 0.2 ? "is-low" : ""}`}>
+    <svg aria-hidden="true" className="timer-ring" viewBox="0 0 40 40">
+      <circle className="timer-ring-track" cx="20" cy="20" r="17" />
+      <circle className="timer-ring-progress" cx="20" cy="20" r="17" style={{ strokeDasharray: circumference, strokeDashoffset: circumference * (1 - ratio) }} />
+    </svg>
+    <span><small>Sisa waktu</small>{minutes} : {seconds}</span>
+  </div>;
+}
+
+function EssayAnswer({ value, onChange, label }: { value: string; onChange: (value: string) => void; label: string }) {
+  return <div className="exam-answer-wrap">
+    <textarea aria-label={label} className="text-input exam-answer" maxLength={500} onChange={(event) => onChange(event.target.value)} placeholder="Tulis jawaban Anda di sini..." value={value} />
+    <span className="character-counter">{value.length} / 500 karakter</span>
+  </div>;
+}
 
 const SESI_LABEL: Record<SesiKey, string> = {
   quiz: "Quiz Praktikum",
@@ -46,7 +83,7 @@ function goPrevious(
   batch: BatchKey,
   number: number,
   selectBatch: (b: BatchKey, n?: number) => void,
-  batches: Record<BatchKey, MockQuestion[]>,
+  batches: Record<BatchKey, UiQuestion[]>,
 ) {
   if (number > 1) return selectBatch(batch, number - 1);
   if (batch === "essay") return selectBatch("pilihanGanda", batches.pilihanGanda.length);
@@ -100,7 +137,7 @@ function QuestionNavigator({
   answeredCount,
 }: {
   activeBatch: BatchKey;
-  batches: Record<BatchKey, MockQuestion[]>;
+  batches: Record<BatchKey, UiQuestion[]>;
   answers: AnswerMap;
   currentNumber: number;
   onSelect: (b: BatchKey, n?: number) => void;
@@ -133,10 +170,7 @@ function QuestionNavigator({
           );
         })}
       </div>
-      <div className="exam-timer">
-        <span aria-hidden="true" className="timer-icon">◷</span>
-        <span>12 : 32</span>
-      </div>
+      <TimerDisplay />
       <p className="navigator-summary">{answeredCount} dari {totalQuestions} soal terjawab</p>
     </aside>
   );
@@ -150,7 +184,7 @@ function LinearNavigator({
   answeredCount,
   onSelect,
 }: {
-  questions: MockQuestion[];
+  questions: UiQuestion[];
   answers: AnswerMap;
   currentNumber: number;
   answeredCount: number;
@@ -180,10 +214,7 @@ function LinearNavigator({
           );
         })}
       </div>
-      <div className="exam-timer">
-        <span aria-hidden="true" className="timer-icon">◷</span>
-        <span>12 : 32</span>
-      </div>
+      <TimerDisplay />
       <p className="navigator-summary">{answeredCount} dari {questions.length} soal terjawab</p>
     </aside>
   );
@@ -209,7 +240,7 @@ const IconShield = () => (
   </svg>
 );
 
-function PreflightScreen({ participantName, sesiLabel, onStart }: { participantName: string; sesiLabel: string; onStart: () => void }) {
+function PreflightScreen({ participantName, sesiLabel, onStart, loading, error }: { participantName: string; sesiLabel: string; onStart: () => void; loading?: boolean; error?: string }) {
   return (
     <main className="figma-login functional-page">
       <QuizHeader participantLabel={participantName} participantOnly />
@@ -234,7 +265,8 @@ function PreflightScreen({ participantName, sesiLabel, onStart }: { participantN
               <div><strong>Kerahasiaan data</strong><p>Respons Anda bersifat rahasia dan hanya dapat diakses oleh tim laboratorium.</p></div>
             </div>
           </div>
-          <button className="primary-button" onClick={onStart}>Saya mengerti dan siap memulai</button>
+          {error && <p className="exam-alert-warning" role="alert">{error}</p>}
+          <button className="primary-button" disabled={loading} onClick={onStart}>{loading ? "Menyiapkan tes..." : "Saya mengerti dan siap memulai"}</button>
         </GlassCard>
       </CenterStage>
       <footer className="figma-login-footer">LABORATORIUM PSIKOLOGI</footer>
@@ -301,8 +333,37 @@ function UjianExam({
   const [answers, setAnswers] = useState<AnswerMap>({});
   const [showFinishDialog, setShowFinishDialog] = useState(false);
   const [message, setMessage] = useState("");
-  const [batches] = useState(() => getExamBatchesByAttendance(participant.attendanceNumber));
+  const [batches, setBatches] = useState<Record<BatchKey, UiQuestion[]>>({ pilihanGanda: [], essay: [], kasus: [] });
   const allowNavigation = useBeforeUnload(started);
+  const startMutation = trpc.exam.start.useMutation();
+  const saveAnswerMutation = trpc.exam.saveAnswer.useMutation();
+  const submitMutation = trpc.exam.submit.useMutation();
+
+  function startExam() {
+    if (MOCK_API_ENABLED) {
+      const { questions } = mockStartExam("post-test");
+      const next = { pilihanGanda: [], essay: [], kasus: [] } as Record<BatchKey, UiQuestion[]>;
+      questions.forEach((question) => {
+        const batch: BatchKey = question.type === "mc" ? "pilihanGanda" : question.stimulusUrls.length ? "kasus" : "essay";
+        next[batch].push({ ...question, imageUrl: question.stimulusUrls[0] });
+      });
+      setBatches(next);
+      setStarted(true);
+      return;
+    }
+    startMutation.mutate(undefined, {
+      onSuccess: ({ questions }) => {
+        const next = { pilihanGanda: [], essay: [], kasus: [] } as Record<BatchKey, UiQuestion[]>;
+        questions.forEach((question) => {
+          const batch: BatchKey = question.type === "mc" ? "pilihanGanda" : question.stimulusUrls.length ? "kasus" : "essay";
+          next[batch].push({ ...question, imageUrl: question.stimulusUrls[0] });
+        });
+        setBatches(next);
+        setStarted(true);
+      },
+      onError: () => setMessage("Soal belum dapat dimuat. Pastikan sesi peserta sudah aktif."),
+    });
+  }
 
   useEffect(() => {
     const syncId = window.setTimeout(() => {
@@ -314,7 +375,7 @@ function UjianExam({
   }, []);
 
   const currentQuestions = batches[activeBatch];
-  const currentQuestion = currentQuestions[currentNumber - 1] as MockQuestion | undefined;
+  const currentQuestion = currentQuestions[currentNumber - 1] as UiQuestion | undefined;
   const currentKey = `${activeBatch}-${currentNumber}`;
   const currentAnswer = answers[currentKey] ?? "";
   const totalQuestions = batches.pilihanGanda.length + batches.essay.length + batches.kasus.length;
@@ -332,6 +393,14 @@ function UjianExam({
       sessionStorage.setItem("webquiz-answers-post-test", JSON.stringify(next));
       return next;
     });
+    const answerInput = {
+      questionId: currentQuestion?.id ?? 0,
+      ...(activeBatch === "pilihanGanda"
+        ? { optionId: currentQuestion?.options?.find((option) => option.text === answer)?.id }
+        : { text: answer }),
+    };
+    if (MOCK_API_ENABLED) mockSaveAnswer(answerInput);
+    else saveAnswerMutation.mutate(answerInput);
     setMessage("Jawaban tersimpan");
     window.setTimeout(() => setMessage(""), 1400);
   }
@@ -344,7 +413,7 @@ function UjianExam({
     else setShowFinishDialog(true);
   }
 
-  if (!started) return <PreflightScreen participantName={participant.name} sesiLabel={sesiLabel} onStart={() => setStarted(true)} />;
+  if (!started) return <PreflightScreen participantName={participant.name} sesiLabel={sesiLabel} onStart={startExam} loading={startMutation.isPending} error={message} />;
   if (!currentQuestion) return null;
 
   const isChoice = activeBatch === "pilihanGanda";
@@ -354,15 +423,12 @@ function UjianExam({
   return (
     <main className="exam-dashboard">
       <QuizHeader participantLabel={participant.name} participantOnly />
+      <ExamProgressBar answered={answeredCount} total={totalQuestions} />
       <div className="exam-dashboard-body">
         <Sidebar activeBatch={activeBatch} onSelect={selectBatch} />
         <section className="exam-question-area">
           <div className="exam-topline">
-            <div>
-              <p className="exam-sesi-label">{sesiLabel}</p>
-              <p className="eyebrow">{batchLabel}</p>
-              <p className="exam-progress-label">Soal {currentNumber} dari {currentQuestions.length}</p>
-            </div>
+            <div className="exam-breadcrumb" aria-label="Posisi soal"><span>{sesiLabel}</span><b>›</b><strong>{batchLabel}</strong><b>›</b><span>Soal {currentNumber} dari {currentQuestions.length}</span></div>
             <span className={`save-indicator ${message.startsWith("Lengkapi") ? "exam-alert-warning" : ""}`} role={message.startsWith("Lengkapi") ? "alert" : undefined}>{message || "Jawaban tersimpan otomatis"}</span>
           </div>
           <GlassCard className="exam-question-card">
@@ -373,7 +439,7 @@ function UjianExam({
             <h1>{currentQuestion.prompt}</h1>
             {isChoice
               ? <ChoiceInput answer={currentAnswer} onChange={saveAnswer} />
-              : <textarea aria-label={isCase ? "Jawaban kasus" : "Jawaban essay"} className="text-input exam-answer" onChange={(e) => saveAnswer(e.target.value)} placeholder="Tulis jawaban Anda di sini..." value={currentAnswer} />
+              : <EssayAnswer label={isCase ? "Jawaban kasus" : "Jawaban essay"} onChange={saveAnswer} value={currentAnswer} />
             }
             <div className="exam-actions">
               <button className="secondary-button" disabled={activeBatch === "pilihanGanda" && currentNumber === 1} onClick={() => goPrevious(activeBatch, currentNumber, selectBatch, batches)}>Soal Sebelumnya</button>
@@ -386,7 +452,19 @@ function UjianExam({
         <QuestionNavigator activeBatch={activeBatch} batches={batches} answers={answers} currentNumber={currentNumber} onSelect={selectBatch} totalQuestions={totalQuestions} answeredCount={answeredCount} />
       </div>
       <footer className="exam-dashboard-footer">LABORATORIUM PSIKOLOGI</footer>
-      {showFinishDialog && <FinishDialog onCancel={() => setShowFinishDialog(false)} onConfirm={() => { allowNavigation(); sessionStorage.removeItem("webquiz-answers-post-test"); window.location.href = completionHref; }} />}
+      {showFinishDialog && <FinishDialog onCancel={() => setShowFinishDialog(false)} onConfirm={() => {
+              if (MOCK_API_ENABLED) {
+                mockSubmitExam();
+                allowNavigation();
+                sessionStorage.removeItem("webquiz-answers-post-test");
+                window.location.href = completionHref;
+                return;
+              }
+              submitMutation.mutate(undefined, {
+                onSuccess: () => { allowNavigation(); sessionStorage.removeItem("webquiz-answers-post-test"); window.location.href = completionHref; },
+                onError: () => setMessage("Jawaban belum dapat dikirim. Coba lagi."),
+              });
+            }} />}
     </main>
   );
 }
@@ -408,8 +486,26 @@ function LinearExam({
   const [answers, setAnswers] = useState<AnswerMap>({});
   const [showFinishDialog, setShowFinishDialog] = useState(false);
   const [message, setMessage] = useState("");
-  const [questions] = useState(() => getLinearEssayBatch(participant.attendanceNumber));
+  const [questions, setQuestions] = useState<UiQuestion[]>([]);
   const allowNavigation = useBeforeUnload(started);
+  const startMutation = trpc.exam.start.useMutation();
+  const saveAnswerMutation = trpc.exam.saveAnswer.useMutation();
+  const submitMutation = trpc.exam.submit.useMutation();
+
+  function startExam() {
+    if (MOCK_API_ENABLED) {
+      setQuestions(mockStartExam("quiz").questions);
+      setStarted(true);
+      return;
+    }
+    startMutation.mutate(undefined, {
+      onSuccess: ({ questions: apiQuestions }) => {
+        setQuestions(apiQuestions.filter((question) => question.type === "fill" && question.stimulusUrls.length === 0));
+        setStarted(true);
+      },
+      onError: () => setMessage("Soal belum dapat dimuat. Pastikan sesi peserta sudah aktif."),
+    });
+  }
 
   useEffect(() => {
     const syncId = window.setTimeout(() => {
@@ -422,7 +518,7 @@ function LinearExam({
 
   const currentKey = `essay-${currentNumber}`;
   const currentAnswer = answers[currentKey] ?? "";
-  const currentQuestion = questions[currentNumber - 1] as MockQuestion | undefined;
+  const currentQuestion = questions[currentNumber - 1] as UiQuestion | undefined;
   const answeredCount = Object.keys(answers).length;
 
   function saveAnswer(answer: string) {
@@ -431,6 +527,9 @@ function LinearExam({
       sessionStorage.setItem("webquiz-answers-quiz", JSON.stringify(next));
       return next;
     });
+    const answerInput = { questionId: currentQuestion?.id ?? 0, text: answer };
+    if (MOCK_API_ENABLED) mockSaveAnswer(answerInput);
+    else saveAnswerMutation.mutate(answerInput);
     setMessage("Jawaban tersimpan");
     window.setTimeout(() => setMessage(""), 1400);
   }
@@ -448,34 +547,24 @@ function LinearExam({
     if (currentNumber > 1) setCurrentNumber(currentNumber - 1);
   }
 
-  if (!started) return <PreflightScreen participantName={participant.name} sesiLabel={sesiLabel} onStart={() => setStarted(true)} />;
+  if (!started) return <PreflightScreen participantName={participant.name} sesiLabel={sesiLabel} onStart={startExam} loading={startMutation.isPending} error={message} />;
 
   if (!currentQuestion) return null;
 
   return (
     <main className="exam-dashboard">
       <QuizHeader participantLabel={participant.name} participantOnly />
-      {/* exam-dashboard-body tanpa sidebar kiri: 2 kolom saja */}
+      <ExamProgressBar answered={answeredCount} total={questions.length} />
       <div className="exam-dashboard-body exam-dashboard-body--linear">
         <CenterStage className="exam-question-area">
           <div className="exam-topline">
-            <div>
-              <p className="exam-sesi-label">{sesiLabel}</p>
-              <p className="eyebrow">Essay</p>
-              <p className="exam-progress-label">Soal {currentNumber} dari {questions.length}</p>
-            </div>
+            <div className="exam-breadcrumb" aria-label="Posisi soal"><span>{sesiLabel}</span><b>›</b><strong>Essay</strong><b>›</b><span>Soal {currentNumber} dari {questions.length}</span></div>
             <span className={`save-indicator ${message.startsWith("Lengkapi") ? "exam-alert-warning" : ""}`} role={message.startsWith("Lengkapi") ? "alert" : undefined}>{message || "Jawaban tersimpan otomatis"}</span>
           </div>
           <GlassCard className="exam-question-card">
             <span className="question-type">Essay</span>
             <h1>{currentQuestion.prompt}</h1>
-            <textarea
-              aria-label="Jawaban essay"
-              className="text-input exam-answer"
-              onChange={(e) => saveAnswer(e.target.value)}
-              placeholder="Tulis jawaban Anda di sini..."
-              value={currentAnswer}
-            />
+            <EssayAnswer label="Jawaban essay" onChange={saveAnswer} value={currentAnswer} />
             <div className="exam-actions">
               <button className="secondary-button" disabled={currentNumber === 1} onClick={prevQuestion}>Soal Sebelumnya</button>
               <button className="primary-button" disabled={!currentAnswer.trim()} onClick={nextQuestion}>
@@ -487,7 +576,19 @@ function LinearExam({
         <LinearNavigator questions={questions} answers={answers} currentNumber={currentNumber} answeredCount={answeredCount} onSelect={setCurrentNumber} />
       </div>
       <footer className="exam-dashboard-footer">LABORATORIUM PSIKOLOGI</footer>
-      {showFinishDialog && <FinishDialog onCancel={() => setShowFinishDialog(false)} onConfirm={() => { allowNavigation(); sessionStorage.removeItem("webquiz-answers-quiz"); window.location.href = completionHref; }} />}
+      {showFinishDialog && <FinishDialog onCancel={() => setShowFinishDialog(false)} onConfirm={() => {
+              if (MOCK_API_ENABLED) {
+                mockSubmitExam();
+                allowNavigation();
+                sessionStorage.removeItem("webquiz-answers-quiz");
+                window.location.href = completionHref;
+                return;
+              }
+              submitMutation.mutate(undefined, {
+                onSuccess: () => { allowNavigation(); sessionStorage.removeItem("webquiz-answers-quiz"); window.location.href = completionHref; },
+                onError: () => setMessage("Jawaban belum dapat dikirim. Coba lagi."),
+              });
+            }} />}
     </main>
   );
 }

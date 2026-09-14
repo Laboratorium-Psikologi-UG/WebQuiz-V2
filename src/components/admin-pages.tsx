@@ -4,11 +4,30 @@ import { useEffect, useState } from "react";
 import { AdminRouteGuard, AdminSidebar } from "@/components/admin-ui";
 import { useToast } from "@/components/toast";
 import { GlassCard, QuizHeader } from "@/components/quiz-ui";
+import { trpc } from "@/lib/trpc/client";
+import {
+  MOCK_API_ENABLED,
+  mockCreateQuestion,
+  mockCreateSession,
+  mockCreateUser,
+  mockDeleteQuestion,
+  mockDeleteSession,
+  mockDeleteUser,
+  mockExportReports,
+  mockListFeedback,
+  mockListQuestions,
+  mockListReports,
+  mockListSessions,
+  mockListUsers,
+  mockMonitoring,
+  mockUpdateQuestion,
+  mockUpdateSession,
+  mockUpdateUser,
+} from "@/lib/mock-service";
 import {
   MockParticipant, MockQuestion, MockResult,
   MockExamSession, MockAdminUser,
-  mockParticipants, mockResults,
-  mockExamSessions, mockQuestionBankSummary, mockAdminUsers,
+  mockExamSessions, mockQuestionBankSummary,
 } from "@/lib/mock-data";
 
 type PageKey = "monitoring" | "exam-management" | "question-bank" | "reports" | "users-and-roles" | "kesan-pesan";
@@ -53,32 +72,33 @@ function StatCards({ cards }: { cards: Array<{ label: string; value: string }> }
 
 export function MonitoringPage() {
   const [kelas, setKelas] = useState("Semua kelas");
-  const filtered = mockParticipants.filter((p) => kelas === "Semua kelas" || p.kelas === kelas);
+  const activeQuery = trpc.admin.monitoring.active.useQuery(undefined, { enabled: !MOCK_API_ENABLED, retry: false });
+  const [mockRows, setMockRows] = useState(() => MOCK_API_ENABLED ? mockMonitoring() : []);
+  const activeParticipants = MOCK_API_ENABLED ? mockRows : (activeQuery.data ?? []);
+  const filteredActive = activeParticipants.filter((participant) => kelas === "Semua kelas" || participant.kelas === kelas);
+  const refreshMonitoring = () => { if (MOCK_API_ENABLED) setMockRows(mockMonitoring()); else void activeQuery.refetch(); };
 
   return (
     <AdminPageShell page="monitoring">
-      <AdminPageIntro eyebrow="Live overview" title="Monitoring user" description="Pantau status peserta yang sedang mengikuti sesi ujian secara real-time." action={<button className="secondary-button" onClick={() => setKelas("Semua kelas")}>Refresh data</button>} />
-      <StatCards cards={[{ label: "Sedang mengerjakan", value: "02" }, { label: "Selesai", value: "01" }, { label: "Belum mulai", value: "08" }]} />
+      <AdminPageIntro eyebrow="Live overview" title="Monitoring user" description="Pantau status peserta yang sedang mengikuti sesi ujian secara real-time." action={<button className="secondary-button" onClick={refreshMonitoring}>Refresh data</button>} />
+      <StatCards cards={[{ label: "Sedang mengerjakan", value: String(activeParticipants.length).padStart(2, "0") }, { label: "Status API", value: MOCK_API_ENABLED ? "OK" : activeQuery.isLoading ? "..." : activeQuery.error ? "ERR" : "OK" }, { label: "Pembaruan", value: "Live" }]} />
       <GlassCard className="admin-data-card">
         <div className="admin-panel-heading">
-          <div><h2>Status peserta ujian</h2><p>Progress peserta berdasarkan sesi yang sedang aktif.</p></div>
-          <select aria-label="Pilih kelas" className="text-input admin-filter" onChange={(e) => setKelas(e.target.value)} value={kelas}>
-            <option>Semua kelas</option>
-            <option>3PA01</option>
-            <option>3PA02</option>
-          </select>
+          <div><h2>Status peserta ujian</h2><p>Data aktif dari monitoring API.</p></div>
+          <div className="admin-filter-group"><select aria-label="Pilih kelas" className="text-input admin-filter" onChange={(event) => setKelas(event.target.value)} value={kelas}><option>Semua kelas</option><option>3PA00</option><option>3PA01</option><option>3PA02</option></select><button className="secondary-button" onClick={refreshMonitoring}>Refresh data</button></div>
         </div>
-        <AdminTable headers={["Nama Praktikan", "NPM", "Sesi", "Status"]}>
-          {filtered.map((p) => (
-            <div className="admin-table admin-table-row" key={p.id}>
+        {!MOCK_API_ENABLED && activeQuery.error && <p className="empty-state" role="alert">Data monitoring belum dapat dimuat.</p>}
+        <AdminTable headers={["Nama Praktikan", "NPM", "Kelas", "Aktivitas terakhir"]}>
+          {filteredActive.map((p) => (
+            <div className="admin-table admin-table-row" key={`${p.npm}-${p.lastActivityAt}`}>
               <strong>{p.name}</strong>
               <span>{p.npm}</span>
-              <span>{p.exam}</span>
-              <span>{p.progress}</span>
+              <span>{p.kelas}</span>
+              <span>{p.lastActivityAt}</span>
             </div>
           ))}
         </AdminTable>
-        {filtered.length === 0 && <p className="empty-state">Tidak ada peserta untuk kelas tersebut.</p>}
+        {(MOCK_API_ENABLED || (!activeQuery.isLoading && !activeQuery.error)) && filteredActive.length === 0 && <p className="empty-state">Belum ada peserta aktif.</p>}
       </GlassCard>
     </AdminPageShell>
   );
@@ -88,7 +108,9 @@ export function MonitoringPage() {
 
 export function ExamManagementPage() {
   const { showToast } = useToast();
-  const [sessions, setSessions] = useState(mockExamSessions);
+  const createPackMutation = trpc.admin.pack.create.useMutation();
+  const [sessions, setSessions] = useState(() => MOCK_API_ENABLED ? mockListSessions() : mockExamSessions);
+  const [deleteSessionTarget, setDeleteSessionTarget] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<MockExamSession | null>(null);
   const [message, setMessage] = useState("");
@@ -102,10 +124,25 @@ export function ExamManagementPage() {
       status: String(fd.get("status")) as MockExamSession["status"],
       token: String(fd.get("token")),
     };
-    setSessions((cur) => editing ? cur.map((s) => s.id === editing.id ? session : s) : [...cur, session]);
-    setShowForm(false);
-    setEditing(null);
-    setMessage("Sesi ujian berhasil disimpan.");
+    if (MOCK_API_ENABLED) {
+      const next = editing ? mockUpdateSession(editing.id, session) : mockCreateSession(session);
+      setSessions(mockListSessions());
+      setShowForm(false);
+      setEditing(null);
+      setMessage("Sesi ujian berhasil disimpan.");
+      showToast(next ? "Sesi ujian berhasil disimpan." : "Sesi tidak ditemukan.", next ? "success" : "error");
+      return;
+    }
+    createPackMutation.mutate({ title: session.name, durationMinutes: 60 }, {
+      onSuccess: () => {
+        setSessions((cur) => editing ? cur.map((s) => s.id === editing.id ? session : s) : [...cur, session]);
+        setShowForm(false);
+        setEditing(null);
+        setMessage("Sesi ujian berhasil disimpan.");
+        showToast("Sesi ujian berhasil disimpan.", "success");
+      },
+      onError: () => showToast("Sesi ujian belum dapat disimpan.", "error"),
+    });
   }
 
   return (
@@ -125,12 +162,14 @@ export function ExamManagementPage() {
               <TextActions actions={[
                 { label: "Edit", onClick: () => { setEditing(s); setShowForm(true); } },
                 { label: "Detail", onClick: () => showToast(`Detail sesi: ${s.name}`, "info") },
+                { label: "Hapus", danger: true, onClick: () => setDeleteSessionTarget(s.id) },
               ]} />
             </div>
           ))}
         </AdminTable>
         {sessions.length === 0 && <p className="empty-state">Tidak ada sesi ujian.</p>}
       </GlassCard>
+      {deleteSessionTarget && <ConfirmDialog title="Hapus sesi ujian?" description="Sesi yang dihapus tidak dapat dipulihkan dari mock data." confirmLabel="Ya, Hapus" onCancel={() => setDeleteSessionTarget(null)} onConfirm={() => { if (MOCK_API_ENABLED) { mockDeleteSession(deleteSessionTarget); setSessions(mockListSessions()); } setDeleteSessionTarget(null); }} />}
 
       {showForm && (
         <div className="modal-backdrop" onClick={() => { setShowForm(false); setEditing(null); }}>
@@ -149,7 +188,7 @@ export function ExamManagementPage() {
             </select>
             <div className="modal-actions">
               <button className="secondary-button" onClick={() => { setShowForm(false); setEditing(null); }} type="button">Batal</button>
-              <button className="action-button-blue" type="submit">Simpan sesi</button>
+              <button className="action-button-blue" disabled={createPackMutation.isPending} type="submit">{createPackMutation.isPending ? "Menyimpan..." : "Simpan sesi"}</button>
             </div>
           </form>
         </div>
@@ -162,14 +201,50 @@ export function ExamManagementPage() {
 
 export function QuestionBankPage() {
   const { showToast } = useToast();
-  const [items, setItems] = useState(mockQuestionBankSummary);
+  const [items, setItems] = useState(() => MOCK_API_ENABLED ? mockListQuestions() : mockQuestionBankSummary);
   const [sessionFilter, setSessionFilter] = useState("Semua sesi");
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const visibleItems = sessionFilter === "Semua sesi"
     ? items
     : items.filter((item) => item.session === sessionFilter);
 
-  function removeItem(id: string) { setItems((cur) => cur.filter((i) => i.id !== id)); }
+  function removeItem(id: string) {
+    if (MOCK_API_ENABLED) {
+      mockDeleteQuestion(id);
+      setItems(mockListQuestions());
+    } else {
+      setItems((cur) => cur.filter((i) => i.id !== id));
+    }
+  }
+
+  function addQuestion() {
+    if (MOCK_API_ENABLED) {
+      mockCreateQuestion({ type: "Essay", count: 1, kelas: "3PA00", status: "Draft", session: "Quiz Praktikum", prompt: "Soal baru dari mock service" });
+      setItems(mockListQuestions());
+      showToast("Soal baru berhasil ditambahkan.", "success");
+      return;
+    }
+    setItems((cur) => [...cur, { id: `qb-${Date.now()}`, type: "Pilihan Ganda", count: 0, kelas: "3PA01", status: "Draft", session: "Post-test Praktikum 02" }]);
+  }
+
+  function importQuestions() {
+    if (MOCK_API_ENABLED) {
+      ["Pilihan Ganda", "Essay", "Kasus"].forEach((type) => mockCreateQuestion({ type, count: 1, kelas: "3PA00", status: "Draft", session: "Quiz Praktikum", prompt: `Soal import ${type}` }));
+      setItems(mockListQuestions());
+      showToast("Import mock berhasil menambahkan 3 soal.", "success");
+      return;
+    }
+    showToast("Import soal siap dihubungkan ke backend.", "info");
+  }
+
+  function editQuestion(item: (typeof items)[number]) {
+    if (!MOCK_API_ENABLED) { showToast(`Edit ${item.type} siap dibuka.`, "info"); return; }
+    const prompt = window.prompt("Isi soal", (item as { prompt?: string }).prompt ?? "");
+    if (!prompt) return;
+    mockUpdateQuestion(item.id, { ...item, prompt });
+    setItems(mockListQuestions());
+    showToast("Soal berhasil diperbarui.", "success");
+  }
 
   return (
     <AdminPageShell page="question-bank">
@@ -179,8 +254,8 @@ export function QuestionBankPage() {
         description="Kelola soal pilihan ganda, essay, dan kasus untuk setiap sesi praktikum."
         action={
           <div className="admin-action-group">
-            <button className="action-button-blue" onClick={() => showToast("Import soal siap dihubungkan ke backend.", "info")}>+ Import Soal</button>
-            <button className="action-button-blue" onClick={() => setItems((cur) => [...cur, { id: `qb-${Date.now()}`, type: "Pilihan Ganda", count: 0, kelas: "3PA01", status: "Draft", session: "Post-test Praktikum 02" }])}>+ Tambah Soal</button>
+            <button className="action-button-blue" onClick={importQuestions}>+ Import Soal</button>
+            <button className="action-button-blue" onClick={addQuestion}>+ Tambah Soal</button>
           </div>
         }
       />
@@ -201,7 +276,7 @@ export function QuestionBankPage() {
               <span>{item.kelas}</span>
               <span>{item.status}</span>
               <TextActions actions={[
-                { label: "Edit", onClick: () => showToast(`Edit ${item.type} siap dibuka.`, "info") },
+                { label: "Edit", onClick: () => editQuestion(item) },
                 { label: "Detail", onClick: () => showToast(`Detail ${item.type} siap dibuka.`, "info") },
                 { label: "Hapus", danger: true, onClick: () => setDeleteTarget(item.id) },
               ]} />
@@ -221,9 +296,19 @@ export function ReportsPage() {
   const { showToast } = useToast();
   const [search, setSearch] = useState("");
   const [kelas, setKelas] = useState("Semua kelas");
-  const filtered = mockResults
+  const attemptsQuery = trpc.admin.report.attempts.useQuery({ packId: 1 }, { enabled: !MOCK_API_ENABLED, retry: false });
+  const [mockReports] = useState(() => MOCK_API_ENABLED ? mockListReports() : []);
+  const reports = MOCK_API_ENABLED ? mockReports : (attemptsQuery.data ?? []);
+  const filtered = reports
     .filter((r) => kelas === "Semua kelas" || r.kelas === kelas)
     .filter((r) => Object.values(r).join(" ").toLowerCase().includes(search.toLowerCase()));
+  function exportReports() {
+    const rows = MOCK_API_ENABLED ? mockExportReports() : filtered.map((row) => [row.npm, row.name, row.kelas, row.score, row.passed]);
+    const csv = [["NPM", "Nama", "Kelas", "Nilai", "Lulus"], ...rows].map((row) => row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(",")).join("\\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    const link = document.createElement("a"); link.href = url; link.download = "reports-mock.csv"; link.click(); URL.revokeObjectURL(url);
+    showToast("Export laporan berhasil dibuat.", "success");
+  }
 
   return (
     <AdminPageShell page="reports">
@@ -231,9 +316,9 @@ export function ReportsPage() {
         eyebrow="Reporting"
         title="Reports and grading"
         description="Tinjau hasil ujian, lakukan grading, dan siapkan laporan untuk tim laboratorium."
-        action={<button className="action-button-blue" onClick={() => showToast("Export laporan siap dihubungkan ke backend.", "info")}>Export</button>}
+        action={<button className="action-button-blue" onClick={exportReports}>Export</button>}
       />
-      <StatCards cards={[{ label: "Total respons", value: "278" }, { label: "Sudah dinilai", value: "242" }, { label: "Perlu grading", value: "36" }]} />
+      <StatCards cards={[{ label: "Total respons", value: String(reports.length) }, { label: "Lulus", value: String(reports.filter((report) => report.passed).length) }, { label: "Belum tersedia", value: attemptsQuery.isLoading ? "..." : attemptsQuery.error ? "Error" : "0" }]} />
       <GlassCard className="admin-data-card">
         <div className="admin-panel-heading">
           <div><h2>Hasil ujian</h2><p>Review hasil peserta dan buka detail grading.</p></div>
@@ -246,14 +331,15 @@ export function ReportsPage() {
             </select>
           </div>
         </div>
-        <AdminTable headers={["Nama Praktikan", "NPM", "Sesi", "Kelas", "Status"]}>
+        {attemptsQuery.error && <p className="empty-state" role="alert">Laporan belum dapat dimuat.</p>}
+        <AdminTable headers={["Nama Praktikan", "NPM", "Kelas", "Nilai", "Status"]}>
           {filtered.map((r) => (
             <div className="admin-table admin-table-row" key={r.npm}>
-              <strong>{r.participant}</strong>
+              <strong>{r.name}</strong>
               <span>{r.npm}</span>
-              <span>{r.session}</span>
               <span>{r.kelas}</span>
-              <span>{r.status}</span>
+              <span>{r.score}</span>
+              <span>{r.passed ? "Lulus" : "Belum lulus"}</span>
             </div>
           ))}
         </AdminTable>
@@ -267,23 +353,37 @@ export function ReportsPage() {
 
 export function UsersAndRolesPage() {
   const { showToast } = useToast();
-  const [users, setUsers] = useState(mockAdminUsers);
+  const usersQuery = trpc.admin.user.list.useQuery(undefined, { enabled: !MOCK_API_ENABLED, retry: false });
+  const createUserMutation = trpc.admin.user.create.useMutation();
+  const setRoleMutation = trpc.admin.user.setRole.useMutation();
+  const [mockUsers, setMockUsers] = useState(() => MOCK_API_ENABLED ? mockListUsers() : []);
+  const users = MOCK_API_ENABLED ? mockUsers : (usersQuery.data ?? []);
   const [roleFilter, setRoleFilter] = useState("Semua role");
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<MockAdminUser | null>(null);
+  const [deleteUserTarget, setDeleteUserTarget] = useState<number | null>(null);
 
   function saveUser(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const fd = new FormData(event.currentTarget);
-    const user: MockAdminUser = {
-      id: editing?.id ?? `user-${Date.now()}`,
-      username: String(fd.get("username")),
-      role: String(fd.get("role")),
-      status: String(fd.get("status")) as MockAdminUser["status"],
+    const username = String(fd.get("username"));
+    const role = String(fd.get("role"));
+    const roleId = role === "Prog" ? 1 : role === "Staff/Structure" ? 2 : 3;
+    if (MOCK_API_ENABLED) {
+      if (editing && Number.isFinite(Number(editing.id))) mockUpdateUser(Number(editing.id), { username, role, status: String(fd.get("status")) });
+      else mockCreateUser({ username, role, status: String(fd.get("status")) });
+      setMockUsers(mockListUsers());
+      setShowForm(false);
+      setEditing(null);
+      showToast("Data user berhasil disimpan.", "success");
+      return;
+    }
+    const options = {
+      onSuccess: () => { setShowForm(false); setEditing(null); showToast("Data user berhasil disimpan.", "success"); },
+      onError: () => showToast("Data user belum dapat disimpan.", "error"),
     };
-    setUsers((cur) => editing ? cur.map((u) => u.id === editing.id ? user : u) : [...cur, user]);
-    setShowForm(false);
-    setEditing(null);
+    if (editing && typeof editing.id === "number") setRoleMutation.mutate({ userId: editing.id, roleId }, options);
+    else createUserMutation.mutate({ username, password: "temporary", roleId }, options);
   }
 
   const filteredUsers = users.filter((u) => roleFilter === "Semua role" || u.role === roleFilter);
@@ -308,13 +408,17 @@ export function UsersAndRolesPage() {
               <span>{u.role}</span>
               <span>{u.status}</span>
               <TextActions actions={[
+                { label: "Edit", onClick: () => { setEditing({ id: String(u.id), username: u.username, role: u.role, status: u.status as "Aktif" | "Menunggu" }); setShowForm(true); } },
                 { label: "Detail", onClick: () => showToast(`Detail user: ${u.username}`, "info") },
+                { label: "Hapus", danger: true, onClick: () => setDeleteUserTarget(u.id) },
               ]} />
             </div>
           ))}
         </AdminTable>
         {filteredUsers.length === 0 && <p className="empty-state">Tidak ada user dengan role tersebut.</p>}
       </GlassCard>
+
+      {deleteUserTarget !== null && <ConfirmDialog title="Hapus user?" description="User yang dihapus tidak dapat dipulihkan dari mock data." confirmLabel="Ya, Hapus" onCancel={() => setDeleteUserTarget(null)} onConfirm={() => { if (MOCK_API_ENABLED) setMockUsers(mockListUsers().filter((user) => user.id !== deleteUserTarget)); mockDeleteUser(deleteUserTarget); setDeleteUserTarget(null); }} />}
 
       {showForm && (
         <div className="modal-backdrop" onClick={() => { setShowForm(false); setEditing(null); }}>
@@ -374,11 +478,21 @@ const mockFeedbackGroups: FeedbackGroup[] = [
   },
 ];
 
+function groupMockFeedback(entries: ReturnType<typeof mockListFeedback>): FeedbackGroup[] {
+  return Object.values(entries.reduce<Record<string, FeedbackGroup>>((groups, entry) => {
+    const group = groups[entry.kelas] ?? { kelas: entry.kelas, entries: [] };
+    group.entries.push({ kesan: entry.kesan, pesan: entry.pesan });
+    groups[entry.kelas] = group;
+    return groups;
+  }, {}));
+}
+
 export function KesanPesanPage() {
-  const [feedbackGroups, setFeedbackGroups] = useState(mockFeedbackGroups);
+  const [feedbackGroups, setFeedbackGroups] = useState(() => MOCK_API_ENABLED ? groupMockFeedback(mockListFeedback()) : mockFeedbackGroups);
   const [kelasFilter, setKelasFilter] = useState("Semua Kelas");
 
   useEffect(() => {
+    if (MOCK_API_ENABLED) return;
     const syncId = window.setTimeout(() => {
       try {
         const stored = localStorage.getItem("webquiz-feedback");
