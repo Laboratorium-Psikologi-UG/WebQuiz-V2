@@ -1,4 +1,8 @@
 import { z } from "zod";
+import { CredentialsSignin } from "next-auth";
+
+import { signIn, signOut } from "@/auth";
+
 import {
   createTRPCRouter,
   privateProcedure,
@@ -28,11 +32,28 @@ export const adminAuthRouter = createTRPCRouter({
   login: publicProcedure
     .input(loginInputSchema)
     .output(loginOutputSchema)
-    .mutation(() => ({ ok: true })),
+    .mutation(async ({ input }) => {
+      try {
+        await signIn("credentials", {
+          username: input.username,
+          password: input.password,
+          redirect: false,
+        });
+      } catch (error) {
+        if (error instanceof CredentialsSignin) {
+          return { ok: false };
+        }
+        throw error;
+      }
+      return { ok: true };
+    }),
   logout: publicProcedure
     .input(z.void())
     .output(logoutOutputSchema)
-    .mutation(() => ({ ok: true })),
+    .mutation(async () => {
+      await signOut({ redirect: false });
+      return { ok: true };
+    }),
   me: privateProcedure
     .input(z.void())
     .output(meOutputSchema)
