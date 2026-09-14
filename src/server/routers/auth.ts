@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { baseProcedure, createTRPCRouter } from "../trpc";
+import { publicProcedure, createTRPCRouter } from "../trpc";
 
 export const classListInputSchema = z.void();
 
@@ -23,14 +23,14 @@ export const redeemOutputSchema = z.object({
 });
 
 export const authRouter = createTRPCRouter({
-  classList: baseProcedure
+  classList: publicProcedure
     .input(classListInputSchema)
     .output(classListOutputSchema)
     .query(() => [
       { id: 1, name: "Class A" },
       { id: 2, name: "Class B" },
     ]),
-  redeem: baseProcedure
+  redeem: publicProcedure
     .input(redeemInputSchema)
     .output(redeemOutputSchema)
     .mutation(() => ({ redirect: "/exam" })),

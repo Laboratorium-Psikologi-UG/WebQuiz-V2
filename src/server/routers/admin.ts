@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { baseProcedure, createTRPCRouter } from "../trpc";
+import { privateProcedure, createTRPCRouter } from "../trpc";
 
 const idInput = z.object({ id: z.number().int() });
 
@@ -90,7 +90,7 @@ const questionPatchInput = z.object({
 
 export const adminRouter = createTRPCRouter({
   pack: createTRPCRouter({
-    create: baseProcedure
+    create: privateProcedure
       .input(
         z.object({
           title: z.string().min(1),
@@ -107,7 +107,7 @@ export const adminRouter = createTRPCRouter({
         status: "draft",
         createdBy: "admin",
       })),
-    update: baseProcedure
+    update: privateProcedure
       .input(packPatchInput)
       .output(packSchema)
       .mutation(({ input }) => ({
@@ -118,7 +118,7 @@ export const adminRouter = createTRPCRouter({
         status: "draft",
         createdBy: "admin",
       })),
-    publish: baseProcedure
+    publish: privateProcedure
       .input(idInput)
       .output(packSchema)
       .mutation(({ input }) => ({
@@ -131,7 +131,7 @@ export const adminRouter = createTRPCRouter({
       })),
   }),
   question: createTRPCRouter({
-    create: baseProcedure
+    create: privateProcedure
       .input(
         z.object({
           packId: z.number().int(),
@@ -154,7 +154,7 @@ export const adminRouter = createTRPCRouter({
         acceptedAnswers: input.acceptedAnswers ?? [],
         stimulusUrls: [],
       })),
-    update: baseProcedure
+    update: privateProcedure
       .input(questionPatchInput)
       .output(questionSchema)
       .mutation(({ input }) => ({
@@ -170,11 +170,11 @@ export const adminRouter = createTRPCRouter({
         acceptedAnswers: input.acceptedAnswers ?? [],
         stimulusUrls: [],
       })),
-    delete: baseProcedure
+    delete: privateProcedure
       .input(idInput)
       .output(z.object({ ok: z.boolean() }))
       .mutation(() => ({ ok: true })),
-    reorder: baseProcedure
+    reorder: privateProcedure
       .input(
         z.object({
           packId: z.number().int(),
@@ -185,7 +185,7 @@ export const adminRouter = createTRPCRouter({
       .mutation(() => ({ ok: true })),
   }),
   token: createTRPCRouter({
-    create: baseProcedure
+    create: privateProcedure
       .input(
         z.object({
           packId: z.number().int(),
@@ -202,7 +202,7 @@ export const adminRouter = createTRPCRouter({
         createdBy: "admin",
         redemptionCount: 0,
       })),
-    revoke: baseProcedure
+    revoke: privateProcedure
       .input(z.object({ tokenId: z.number().int() }))
       .output(tokenSchema)
       .mutation(({ input }) => ({
@@ -214,10 +214,10 @@ export const adminRouter = createTRPCRouter({
         createdBy: "admin",
         redemptionCount: 0,
       })),
-    list: baseProcedure.input(z.void()).output(tokenListOutput).query(() => []),
+    list: privateProcedure.input(z.void()).output(tokenListOutput).query(() => []),
   }),
   user: createTRPCRouter({
-    create: baseProcedure
+    create: privateProcedure
       .input(
         z.object({
           username: z.string().min(1),
@@ -232,7 +232,7 @@ export const adminRouter = createTRPCRouter({
         role: "placeholder",
         status: "Menunggu",
       })),
-    approve: baseProcedure
+    approve: privateProcedure
       .input(z.object({ userId: z.number().int() }))
       .output(userSchema)
       .mutation(({ input }) => ({
@@ -241,8 +241,8 @@ export const adminRouter = createTRPCRouter({
         role: "placeholder",
         status: "Aktif",
       })),
-    list: baseProcedure.input(z.void()).output(userListOutput).query(() => []),
-    setRole: baseProcedure
+    list: privateProcedure.input(z.void()).output(userListOutput).query(() => []),
+    setRole: privateProcedure
       .input(
         z.object({
           userId: z.number().int(),
@@ -256,26 +256,26 @@ export const adminRouter = createTRPCRouter({
         role: "placeholder",
         status: "Aktif",
       })),
-    delete: baseProcedure
+    delete: privateProcedure
       .input(z.object({ userId: z.number().int() }))
       .output(z.object({ ok: z.boolean() }))
       .mutation(() => ({ ok: true })),
   }),
   kelas: createTRPCRouter({
-    create: baseProcedure
+    create: privateProcedure
       .input(z.object({ name: z.string().min(1) }))
       .output(kelasSchema)
       .mutation(({ input }) => ({ id: 1, name: input.name })),
-    list: baseProcedure.input(z.void()).output(kelasListOutput).query(() => []),
+    list: privateProcedure.input(z.void()).output(kelasListOutput).query(() => []),
   }),
   monitoring: createTRPCRouter({
-    active: baseProcedure
+    active: privateProcedure
       .input(z.void())
       .output(z.array(adminMonitoringRowSchema))
       .query(() => []),
   }),
   report: createTRPCRouter({
-    attempts: baseProcedure
+    attempts: privateProcedure
       .input(
         z.object({
           packId: z.number().int(),
@@ -284,13 +284,13 @@ export const adminRouter = createTRPCRouter({
       )
       .output(attemptsOutput)
       .query(() => []),
-    export: baseProcedure
+    export: privateProcedure
       .input(packIdInput)
       .output(z.string())
       .query(() => "npm,name,kelas,score,passed\n"),
   }),
   grading: createTRPCRouter({
-    setManualScore: baseProcedure
+    setManualScore: privateProcedure
       .input(
         z.object({
           responseId: z.string().regex(/^\d+:\d+$/),

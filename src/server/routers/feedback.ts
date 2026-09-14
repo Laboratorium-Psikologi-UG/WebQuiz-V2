@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { baseProcedure, createTRPCRouter } from "../trpc";
+import { privateProcedure, createTRPCRouter } from "../trpc";
 
 export const feedbackSubmitInputSchema = z.object({
   kesan: z.string().min(1),
@@ -11,7 +11,7 @@ export const feedbackSubmitOutputSchema = z.object({
 });
 
 export const feedbackRouter = createTRPCRouter({
-  submit: baseProcedure
+  submit: privateProcedure
     .input(feedbackSubmitInputSchema)
     .output(feedbackSubmitOutputSchema)
     .mutation(() => ({ ok: true })),

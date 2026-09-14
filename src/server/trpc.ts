@@ -1,4 +1,4 @@
-import { initTRPC } from "@trpc/server";
+import { TRPCError, initTRPC } from "@trpc/server";
 import superjson from "superjson";
 import { ZodError } from "zod";
 import type { Context } from "./context";
@@ -25,4 +25,22 @@ const t = initTRPC.context<Context>().create({
 
 export const createCallerFactory = t.createCallerFactory;
 export const createTRPCRouter = t.router;
-export const baseProcedure = t.procedure;
+
+/** Public procedure — no authentication required. */
+export const publicProcedure = t.procedure;
+
+/**
+ * Private procedure — requires an authenticated session.
+ * Rejects unauthenticated callers with UNAUTHORIZED and narrows
+ * `ctx.session` to non-null for downstream resolvers.
+ */
+export const privateProcedure = t.procedure.use(({ ctx, next }) => {
+  if (!ctx.session?.user) {
+    throw new TRPCError({ code: "UNAUTHORIZED" });
+  }
+  return next({
+    ctx: {
+      session: { ...ctx.session, user: ctx.session.user },
+    },
+  });
+});

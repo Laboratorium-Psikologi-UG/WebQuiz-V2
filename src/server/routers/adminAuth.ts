@@ -1,6 +1,9 @@
-import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { baseProcedure, createTRPCRouter } from "../trpc";
+import {
+  createTRPCRouter,
+  privateProcedure,
+  publicProcedure,
+} from "../trpc";
 
 export const loginInputSchema = z.object({
   username: z.string().min(1),
@@ -22,18 +25,16 @@ export const meOutputSchema = z.object({
 });
 
 export const adminAuthRouter = createTRPCRouter({
-  login: baseProcedure
+  login: publicProcedure
     .input(loginInputSchema)
     .output(loginOutputSchema)
     .mutation(() => ({ ok: true })),
-  logout: baseProcedure
+  logout: publicProcedure
     .input(z.void())
     .output(logoutOutputSchema)
     .mutation(() => ({ ok: true })),
-  me: baseProcedure
+  me: privateProcedure
     .input(z.void())
     .output(meOutputSchema)
-    .query(() => {
-      throw new TRPCError({ code: "UNAUTHORIZED" });
-    }),
+    .query(({ ctx }) => ctx.session.user),
 });
