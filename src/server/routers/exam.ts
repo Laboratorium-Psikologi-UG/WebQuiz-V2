@@ -1,6 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { privateProcedure, createTRPCRouter } from "../trpc";
+import { publicProcedure, createTRPCRouter } from "../trpc";
 
 export const questionTypeSchema = z.enum(["mc", "fill"]);
 
@@ -87,34 +87,34 @@ export const resultOutputSchema = z.object({
 });
 
 export const examRouter = createTRPCRouter({
-  me: privateProcedure
+  me: publicProcedure
     .input(z.void())
     .output(meOutputSchema)
     .query(() => ({
       pack: { id: 1, title: "Placeholder Pack", durationMinutes: 60 },
       attempt: undefined,
     })),
-  start: privateProcedure
+  start: publicProcedure
     .input(z.void())
     .output(startOutputSchema)
     .mutation(() => {
       throw new TRPCError({ code: "UNAUTHORIZED" });
     }),
-  saveAnswer: privateProcedure
+  saveAnswer: publicProcedure
     .input(saveAnswerInputSchema)
     .output(saveAnswerOutputSchema)
     .mutation(() => ({ ok: true })),
-  heartbeat: privateProcedure
+  heartbeat: publicProcedure
     .input(z.void())
     .output(heartbeatOutputSchema)
     .mutation(() => ({ ok: true })),
-  submit: privateProcedure
+  submit: publicProcedure
     .input(z.void())
     .output(submitOutputSchema)
     .mutation(() => {
       throw new TRPCError({ code: "UNAUTHORIZED" });
     }),
-  result: privateProcedure
+  result: publicProcedure
     .input(z.void())
     .output(resultOutputSchema)
     .query(() => {

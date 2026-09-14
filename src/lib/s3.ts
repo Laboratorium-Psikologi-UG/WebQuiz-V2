@@ -93,8 +93,6 @@ export const s3: S3Client = new Proxy({} as S3Client, {
   },
 });
 
-export const S3_BUCKET: string = process.env.S3_BUCKET ?? "";
-
 export async function getUploadUrl(
   key: string,
   options?: { contentType?: string; expiresIn?: number },
@@ -153,19 +151,44 @@ export async function deleteObject(key: string): Promise<void> {
   );
 }
 
+const DELETE_OBJECTS_MAX_KEYS = 1000;
+
 export async function deleteObjects(keys: string[]): Promise<void> {
-  if (keys.length === 0) {
+  const nonEmptyKeys = keys.filter((key) => key.length > 0);
+  if (nonEmptyKeys.length === 0) {
     return;
   }
 
-  await getS3Client().send(
-    new DeleteObjectsCommand({
-      Bucket: bucket(),
-      Delete: {
-        Objects: keys.map((key) => ({ Key: key })),
-      },
-    }),
-  );
+  const client = getS3Client();
+  const targetBucket = bucket();
+
+  for (let i = 0; i < nonEmptyKeys.length; i += DELETE_OBJECTS_MAX_KEYS) {
+    const batch = nonEmptyKeys.slice(i, i + DELETE_OBJECTS_MAX_KEYS);
+
+    const result = await client.send(
+      new DeleteObjectsCommand({
+        Bucket: targetBucket,
+        Delete: {
+          Objects: batch.map((key) => ({ Key: key })),
+        },
+      }),
+    );
+
+    const errors = result.Errors ?? [];
+    if (errors.length > 0) {
+      const details = errors
+        .map((error, index) => {
+          const label = error.Key ?? batch[index] ?? "(unknown key)";
+          const code = error.Code ?? "UnknownError";
+          const message = error.Message ?? "No message provided";
+          return `${label} [${code}]: ${message}`;
+        })
+        .join("; ");
+      throw new Error(
+        `S3 DeleteObjects failed for ${errors.length} of ${batch.length} object(s): ${details}`,
+      );
+    }
+  }
 }
 
 export function buildObjectKey(questionId: number, filename: string): string {

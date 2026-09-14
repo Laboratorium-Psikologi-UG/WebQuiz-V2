@@ -44,3 +44,15 @@ export const privateProcedure = t.procedure.use(({ ctx, next }) => {
     },
   });
 });
+
+/**
+ * Admin procedure — layered on `privateProcedure`, so unauthenticated callers
+ * are still rejected with UNAUTHORIZED. Requires the account role to be
+ * exactly "admin"; any other role is rejected with FORBIDDEN.
+ */
+export const adminProcedure = privateProcedure.use(({ ctx, next }) => {
+  if (ctx.session.user.role !== "admin") {
+    throw new TRPCError({ code: "FORBIDDEN" });
+  }
+  return next({ ctx });
+});

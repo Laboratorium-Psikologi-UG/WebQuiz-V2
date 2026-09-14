@@ -8,18 +8,18 @@ datasource db {
 }
 
 model Kelas {
-  id               Int               @id @default(autoincrement())
-  name             String            @unique @db.VarChar(191)
+  id   Int    @id @default(autoincrement())
+  name String @unique @db.VarChar(191)
 
-  redemptions      TokenRedemption[]
-  feedbacks        Feedback[]
+  redemptions TokenRedemption[]
+  feedbacks   Feedback[]
 
   @@map("kelas")
 }
 
 model Role {
-  id       Int       @id @default(autoincrement())
-  name     String    @unique @db.VarChar(191)
+  id   Int    @id @default(autoincrement())
+  name String @unique @db.VarChar(191)
 
   accounts Account[]
 
@@ -41,8 +41,8 @@ model Account {
 }
 
 model PackStatus {
-  id    Int    @id @default(autoincrement())
-  name  String @unique @db.VarChar(32) // "draft" | "published"
+  id   Int    @id @default(autoincrement())
+  name String @unique @db.VarChar(32) // "draft" | "published"
 
   packs Pack[]
 
@@ -74,7 +74,7 @@ model Question {
   prompt   String @db.Text
   position Int
 
-  pack           Pack            @relation(fields: [packId], references: [id], onDelete: Cascade)
+  pack           Pack             @relation(fields: [packId], references: [id], onDelete: Cascade)
   imageUrl       ImageUrl?
   answerOptions  AnswerOption[]
   acceptedAnswer AcceptedAnswer[]
@@ -174,8 +174,8 @@ model Attempt {
 }
 
 model AttemptResult {
-  attemptId Int      @id
-  scorePct  Decimal  @db.Decimal(5, 2)
+  attemptId Int       @id
+  scorePct  Decimal   @db.Decimal(5, 2)
   passed    Boolean
   gradedAt  DateTime?
 
@@ -185,14 +185,14 @@ model AttemptResult {
 }
 
 model AttemptAnswer {
-  id        Int     @id @default(autoincrement())
-  attemptId Int
+  id         Int     @id @default(autoincrement())
+  attemptId  Int
   questionId Int
-  isFlagged Boolean @default(false)
+  isFlagged  Boolean @default(false)
 
-  attempt  Attempt               @relation(fields: [attemptId], references: [id], onDelete: Cascade)
-  question Question              @relation(fields: [questionId], references: [id])
-  selections AttemptSelection[]
+  attempt      Attempt              @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  question     Question             @relation(fields: [questionId], references: [id])
+  selections   AttemptSelection[]
   textResponse AttemptTextResponse?
 
   @@unique([attemptId, questionId])
@@ -213,10 +213,10 @@ model AttemptSelection {
 }
 
 model AttemptTextResponse {
-  answerId     Int      @id
-  responseText String   @db.Text
-  manualScore  Decimal? @db.Decimal(5, 2)
-  gradedBy     String?  @db.VarChar(191) // Account.username
+  answerId     Int       @id
+  responseText String    @db.Text
+  manualScore  Decimal?  @db.Decimal(5, 2)
+  gradedBy     String?   @db.VarChar(191) // Account.username
   gradedAt     DateTime?
 
   answer AttemptAnswer @relation(fields: [answerId], references: [id], onDelete: Cascade)
@@ -237,4 +237,16 @@ model Feedback {
 
   @@index([kelasId])
   @@map("feedback")
+}
+
+model LoginAttempt {
+  id          BigInt    @id @default(autoincrement())
+  key         String    @unique @db.VarChar(191)
+  failures    Int       @default(0)
+  windowStart DateTime  @default(now())
+  lockedUntil DateTime?
+  updatedAt   DateTime  @updatedAt
+
+  @@index([updatedAt])
+  @@map("login_attempt")
 }
