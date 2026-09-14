@@ -87,6 +87,7 @@ export const resultOutputSchema = z.object({
 });
 
 export const examRouter = createTRPCRouter({
+  // TODO: replace hardcoded placeholder pack with the real exam-pack lookup
   me: publicProcedure
     .input(z.void())
     .output(meOutputSchema)
@@ -94,26 +95,31 @@ export const examRouter = createTRPCRouter({
       pack: { id: 1, title: "Placeholder Pack", durationMinutes: 60 },
       attempt: undefined,
     })),
+  // TODO: implement attempt creation; currently an unconditional placeholder error
   start: publicProcedure
     .input(z.void())
     .output(startOutputSchema)
     .mutation(() => {
       throw new TRPCError({ code: "UNAUTHORIZED" });
     }),
+  // TODO: persist the submitted answer instead of the placeholder { ok: true }
   saveAnswer: publicProcedure
     .input(saveAnswerInputSchema)
     .output(saveAnswerOutputSchema)
     .mutation(() => ({ ok: true })),
+  // TODO: implement heartbeat handling instead of the placeholder { ok: true }
   heartbeat: publicProcedure
     .input(z.void())
     .output(heartbeatOutputSchema)
     .mutation(() => ({ ok: true })),
+  // TODO: implement grading and attempt submission; currently a placeholder error
   submit: publicProcedure
     .input(z.void())
     .output(submitOutputSchema)
     .mutation(() => {
       throw new TRPCError({ code: "UNAUTHORIZED" });
     }),
+  // TODO: return the persisted attempt result; currently a placeholder error
   result: publicProcedure
     .input(z.void())
     .output(resultOutputSchema)

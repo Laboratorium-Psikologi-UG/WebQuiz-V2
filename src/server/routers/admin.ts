@@ -90,6 +90,7 @@ const questionPatchInput = z.object({
 
 export const adminRouter = createTRPCRouter({
   pack: createTRPCRouter({
+    // TODO: implement pack.create - returns hardcoded placeholder pack.
     create: adminProcedure
       .input(
         z.object({
@@ -107,6 +108,7 @@ export const adminRouter = createTRPCRouter({
         status: "draft",
         createdBy: "admin",
       })),
+    // TODO: implement pack.update - returns hardcoded placeholder pack.
     update: adminProcedure
       .input(packPatchInput)
       .output(packSchema)
@@ -118,6 +120,7 @@ export const adminRouter = createTRPCRouter({
         status: "draft",
         createdBy: "admin",
       })),
+    // TODO: implement pack.publish - returns hardcoded placeholder pack.
     publish: adminProcedure
       .input(idInput)
       .output(packSchema)
@@ -131,6 +134,7 @@ export const adminRouter = createTRPCRouter({
       })),
   }),
   question: createTRPCRouter({
+    // TODO: implement question.create - returns hardcoded placeholder question.
     create: adminProcedure
       .input(
         z.object({
@@ -154,6 +158,7 @@ export const adminRouter = createTRPCRouter({
         acceptedAnswers: input.acceptedAnswers ?? [],
         stimulusUrls: [],
       })),
+    // TODO: implement question.update - returns hardcoded placeholder question.
     update: adminProcedure
       .input(questionPatchInput)
       .output(questionSchema)
@@ -170,10 +175,12 @@ export const adminRouter = createTRPCRouter({
         acceptedAnswers: input.acceptedAnswers ?? [],
         stimulusUrls: [],
       })),
+    // TODO: implement question.delete - unconditionally returns { ok: true }.
     delete: adminProcedure
       .input(idInput)
       .output(z.object({ ok: z.boolean() }))
       .mutation(() => ({ ok: true })),
+    // TODO: implement question.reorder - unconditionally returns { ok: true }.
     reorder: adminProcedure
       .input(
         z.object({
@@ -185,6 +192,7 @@ export const adminRouter = createTRPCRouter({
       .mutation(() => ({ ok: true })),
   }),
   token: createTRPCRouter({
+    // TODO: implement token.create - returns hardcoded placeholder token.
     create: adminProcedure
       .input(
         z.object({
@@ -202,6 +210,7 @@ export const adminRouter = createTRPCRouter({
         createdBy: "admin",
         redemptionCount: 0,
       })),
+    // TODO: implement token.revoke - returns hardcoded placeholder token.
     revoke: adminProcedure
       .input(z.object({ tokenId: z.number().int() }))
       .output(tokenSchema)
@@ -214,9 +223,11 @@ export const adminRouter = createTRPCRouter({
         createdBy: "admin",
         redemptionCount: 0,
       })),
+    // TODO: implement token.list - always returns an empty array.
     list: adminProcedure.input(z.void()).output(tokenListOutput).query(() => []),
   }),
   user: createTRPCRouter({
+    // TODO: implement user.create - returns hardcoded placeholder user.
     create: adminProcedure
       .input(
         z.object({
@@ -232,6 +243,7 @@ export const adminRouter = createTRPCRouter({
         role: "placeholder",
         status: "Menunggu",
       })),
+    // TODO: implement user.approve - returns hardcoded placeholder user.
     approve: adminProcedure
       .input(z.object({ userId: z.number().int() }))
       .output(userSchema)
@@ -241,7 +253,9 @@ export const adminRouter = createTRPCRouter({
         role: "placeholder",
         status: "Aktif",
       })),
+    // TODO: implement user.list - always returns an empty array.
     list: adminProcedure.input(z.void()).output(userListOutput).query(() => []),
+    // TODO: implement user.setRole - returns hardcoded placeholder user.
     setRole: adminProcedure
       .input(
         z.object({
@@ -256,25 +270,30 @@ export const adminRouter = createTRPCRouter({
         role: "placeholder",
         status: "Aktif",
       })),
+    // TODO: implement user.delete - unconditionally returns { ok: true }.
     delete: adminProcedure
       .input(z.object({ userId: z.number().int() }))
       .output(z.object({ ok: z.boolean() }))
       .mutation(() => ({ ok: true })),
   }),
   kelas: createTRPCRouter({
+    // TODO: implement kelas.create - returns hardcoded placeholder kelas.
     create: adminProcedure
       .input(z.object({ name: z.string().min(1) }))
       .output(kelasSchema)
       .mutation(({ input }) => ({ id: 1, name: input.name })),
+    // TODO: implement kelas.list - always returns an empty array.
     list: adminProcedure.input(z.void()).output(kelasListOutput).query(() => []),
   }),
   monitoring: createTRPCRouter({
+    // TODO: implement monitoring.active - always returns an empty array.
     active: adminProcedure
       .input(z.void())
       .output(z.array(adminMonitoringRowSchema))
       .query(() => []),
   }),
   report: createTRPCRouter({
+    // TODO: implement report.attempts - always returns an empty array.
     attempts: adminProcedure
       .input(
         z.object({
@@ -284,12 +303,14 @@ export const adminRouter = createTRPCRouter({
       )
       .output(attemptsOutput)
       .query(() => []),
+    // TODO: implement report.export - returns a hardcoded CSV header.
     export: adminProcedure
       .input(packIdInput)
       .output(z.string())
       .query(() => "npm,name,kelas,score,passed\n"),
   }),
   grading: createTRPCRouter({
+    // TODO: implement grading.setManualScore - unconditionally returns { ok: true }.
     setManualScore: adminProcedure
       .input(
         z.object({

@@ -11,6 +11,7 @@ export const feedbackSubmitOutputSchema = z.object({
 });
 
 export const feedbackRouter = createTRPCRouter({
+  // TODO: Stub - ignores input and unconditionally returns { ok: true }; implement real feedback persistence.
   submit: publicProcedure
     .input(feedbackSubmitInputSchema)
     .output(feedbackSubmitOutputSchema)

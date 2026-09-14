@@ -23,6 +23,7 @@ export const redeemOutputSchema = z.object({
 });
 
 export const authRouter = createTRPCRouter({
+  // TODO: implement classList to return real class data instead of hardcoded values.
   classList: publicProcedure
     .input(classListInputSchema)
     .output(classListOutputSchema)
@@ -30,6 +31,7 @@ export const authRouter = createTRPCRouter({
       { id: 1, name: "Class A" },
       { id: 2, name: "Class B" },
     ]),
+  // TODO: implement redeem to process the input and perform the actual redemption instead of returning a placeholder redirect.
   redeem: publicProcedure
     .input(redeemInputSchema)
     .output(redeemOutputSchema)

@@ -10,6 +10,7 @@ export const monitoringActiveItemSchema = z.object({
 export const monitoringActiveOutputSchema = z.array(monitoringActiveItemSchema);
 
 export const monitoringRouter = createTRPCRouter({
+  // TODO: implement active monitoring query; currently returns a placeholder empty list.
   active: publicProcedure
     .input(z.void())
     .output(monitoringActiveOutputSchema)
